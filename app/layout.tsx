@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono, Roboto_Slab, Roboto } from "next/font/google"
+import { Geist, Geist_Mono, Roboto_Slab, Roboto, IBM_Plex_Sans } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -9,10 +9,7 @@ const robotoHeading = Roboto({subsets:['latin'],variable:'--font-heading'});
 
 const robotoSlab = Roboto_Slab({subsets:['latin'],variable:'--font-serif'});
 
-const fontSans = Geist({
-  subsets: ["latin"],
-  variable: "--font-sans",
-})
+const ibmPlexSans = IBM_Plex_Sans({subsets:['latin'],variable:'--font-sans'})
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
@@ -28,7 +25,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", fontSans.variable, fontMono.variable, "font-serif", robotoSlab.variable, robotoHeading.variable)}
+      className={cn("antialiased", fontMono.variable, robotoSlab.variable, robotoHeading.variable, "font-sans", ibmPlexSans.variable)}
     >
       <body>
         <Analytics/>
