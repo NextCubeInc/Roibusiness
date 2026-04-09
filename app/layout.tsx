@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Roboto_Slab, Roboto } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils";
+import { Analytics } from "@vercel/analytics/next"
 
 const robotoHeading = Roboto({subsets:['latin'],variable:'--font-heading'});
 
@@ -30,6 +31,7 @@ export default function RootLayout({
       className={cn("antialiased", fontSans.variable, fontMono.variable, "font-serif", robotoSlab.variable, robotoHeading.variable)}
     >
       <body>
+        <Analytics/>
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
