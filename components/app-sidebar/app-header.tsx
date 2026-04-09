@@ -5,18 +5,11 @@ import { SidebarTrigger, useSidebar } from "../ui/sidebar"
 export function AppHeader(){
   const {open} = useSidebar()
   return(
-    <header className="flex flex-row p-3 gap-4">
+    <header className="flex flex-row pt-2 pl-2">
       {open?
       (<></>):
-      (
-        <>
-          <SidebarTrigger/>
-          <Separator orientation="vertical"/>
-        </>
-      )
+      (<SidebarTrigger/>)
       }
-      
-      <h1 className="font-semibold">NAME</h1>
     </header>
   )
 }

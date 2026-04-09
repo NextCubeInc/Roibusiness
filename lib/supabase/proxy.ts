@@ -1,3 +1,4 @@
+import { isProfileFilled } from '@/app/actions/fillProfile'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -43,11 +44,25 @@ export async function updateSession(request: NextRequest) {
     !user &&
     !request.nextUrl.pathname.startsWith('/auth')
   ) {
-    // no user, potentially respond by redirecting the user to the login page
+    // No user: redirect to sign-in (avoid redirecting "/" -> "/" which loops)
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    url.pathname = '/auth/signin'
+    //url.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search)
     return NextResponse.redirect(url)
   }
+  const { filled } = await isProfileFilled(supabase)
+    if (
+      !filled &&
+      user &&
+      request.nextUrl.pathname.startsWith('/main')
+
+    ) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding'
+      return NextResponse.redirect(url)
+      
+    }
+
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:
