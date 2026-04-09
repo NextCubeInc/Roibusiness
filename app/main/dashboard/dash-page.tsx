@@ -254,7 +254,7 @@ export default function DashboardClient({
                 <Line
                   type="monotone"
                   dataKey="total"
-                  stroke="#8200db"
+                  stroke="var(--color-primary)"
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   activeDot={{ r: 5 }}
@@ -265,7 +265,7 @@ export default function DashboardClient({
         </Card>
 
         {/* Monthly chart */}
-        <Card>
+        <Card className="">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Vendas por mês
@@ -312,7 +312,7 @@ export default function DashboardClient({
                 <Line
                   type="monotone"
                   dataKey="total"
-                  stroke="#8200db"
+                  stroke="var(--color-primary)"
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   activeDot={{ r: 5 }}
