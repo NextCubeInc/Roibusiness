@@ -14,6 +14,7 @@ import { Loader2, CheckCircle2, XCircle } from "lucide-react"
 import { updateBusinessProfile, updatePassword, type BusinessSettings } from "./actions"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { redirect } from "next/navigation"
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
@@ -204,7 +205,7 @@ function PlanoTab({ settings }: { settings: BusinessSettings }) {
         </div>
       </div>
 
-      <Button>Fazer upgrade</Button>
+      <Button onClick={()=> redirect("/main/plans")}>Fazer upgrade</Button>
     </Card>
   )
 }

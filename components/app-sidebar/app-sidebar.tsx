@@ -80,7 +80,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
               const isActive = pathname.startsWith(item.Link)
               
               return (
-                <SidebarMenuItem key={item.id}>
+                <SidebarMenuItem key={item.id} className="mb-3">
                   <SidebarMenuButton 
                     asChild 
                     isActive={isActive}
@@ -142,7 +142,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                     <User/>
                     Account
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={()=> redirect("")}>d
+                  <DropdownMenuItem onClick={()=> redirect("/main/plans")}>
                     <Stars/>
                     Plans
                   </DropdownMenuItem>
