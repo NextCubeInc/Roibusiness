@@ -82,8 +82,11 @@ export async function CreateLink(plan: keyof typeof PLANS) {
     })
   })
 
-  if (!res.ok) throw new Error(`Erro na API: ${res.status} ${res.statusText}`)
-  window.location.reload()
+  if (!res.ok) {
+  const body = await res.json()
+  console.error("PAGARME ERROR:", JSON.stringify(body, null, 2))
+  throw new Error(`Erro na API: ${res.status}`)
+  }
 
   return res.json()
 }
@@ -135,7 +138,6 @@ export async function CancelPlan() {
   })
 
   if (!res.ok) throw new Error(`Erro na API: ${res.status} ${res.statusText}`)
-  window.location.reload()
 
   return res.json()
 }
