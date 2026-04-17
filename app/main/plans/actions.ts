@@ -55,7 +55,7 @@ export async function CreateLink(plan: keyof typeof PLANS) {
 
   const { name, plan_id } = PLANS[plan]
 
-  const res = await fetch('https://api.pagar.me/core/v5/paymentlinks (COPY)', {
+  const res = await fetch('https://api.pagar.me/core/v5/paymentlinks', {
     method: 'POST',
     headers: PAGARME_HEADERS,
     body: JSON.stringify({
