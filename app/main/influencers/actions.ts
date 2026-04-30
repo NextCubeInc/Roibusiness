@@ -1,35 +1,58 @@
-// app/main/influencers/actions.ts
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
 
+export type PendingInvite = {
+  influencer_id: string
+  name:          string | null
+  instagram:     string | null
+  avatar_url:    string | null
+  invited_at:    string
+}
+
+export async function getPendingInvites(): Promise<PendingInvite[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc("get_pending_invites")
+  if (error) console.error(error)
+  return data ?? []
+}
+
 export async function getInfluencerByCode(code: string) {
   const supabase = await createClient()
-
   const { data, error } = await supabase
     .rpc('get_influencer_by_invite_code', { p_invite_code: code })
-
   if (error || !data?.[0]) return null
-
   return data[0]
 }
 
 export async function setBusinessInfluencer(invite_code: string) {
   const supabase = await createClient()
 
-  const formatted = `${invite_code.slice(0, 4)}-${invite_code.slice(4)}`
+  const formatted = invite_code.includes("-")
+    ? invite_code
+    : `${invite_code.slice(0, 4)}-${invite_code.slice(4)}`
 
-  const { data, error: rpcError } = await supabase
+  const { data: found } = await supabase
     .rpc('get_influencer_by_invite_code', { p_invite_code: formatted })
 
-  if (!data?.[0]) return { success: false }
+  if (!found?.[0]) return { success: false, error: "not_found" as const }
 
   const { error } = await supabase
-    .from('business_influencers')
-    .insert([{ influencer_id: data[0].id, invite_code_used: formatted }])
+    .rpc('create_business_invite', { p_influencer_id: found[0].id })
 
-  if (error) return { success: false }
-  return { success: true }
+  if (error) {
+    const isDuplicate = error.message.includes("duplicate_invite")
+    return { success: false, error: isDuplicate ? "duplicate_invite" as const : "unknown" as const }
+  }
+
+  return { success: true, error: null }
+}
+
+export async function cancelInvite(influencer_id: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .rpc('cancel_business_invite', { p_influencer_id: influencer_id })
+  return { success: !error, error: error?.message ?? null }
 }
 
 export default async function getInfluencersData(month?: string) {
@@ -40,14 +63,10 @@ export default async function getInfluencersData(month?: string) {
   return data ?? []
 }
 
-export async function addCoupon(influencer_id: string, code: string, valueC:number) {
+export async function addCoupon(influencer_id: string, code: string, valueC: number) {
   const supabase = await createClient()
-
   const { data, error } = await supabase
-    .rpc('add_coupon', { p_influencer_id: influencer_id, p_code: code, p_commission_percent: valueC})
-
-  console.log("ADD COUPON RESULT:", JSON.stringify({ data, error }, null, 2))
-
+    .rpc('add_coupon', { p_influencer_id: influencer_id, p_code: code, p_commission_percent: valueC })
   return { success: !error, id: data as string | null, error: error?.message }
 }
 
