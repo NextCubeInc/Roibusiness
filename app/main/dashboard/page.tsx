@@ -2,7 +2,8 @@
 import { getDashboardData } from "./actions"
 import DashboardClient from "./dash-page"
 
-export const dynamic = "force-dynamic"
+// force-dynamic removido — o cache é controlado por unstable_cache + revalidateTag
+// As páginas são servidas do cache e atualizadas via trigger do banco ao subir novo pedido
 
 export default async function DashboardPage({
   searchParams,

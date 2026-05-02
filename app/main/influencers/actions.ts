@@ -1,5 +1,6 @@
 "use server"
 
+import { unstable_cache, revalidateTag } from 'next/cache'
 import { createClient } from "@/lib/supabase/server"
 
 export type PendingInvite = {
@@ -12,9 +13,24 @@ export type PendingInvite = {
 
 export async function getPendingInvites(): Promise<PendingInvite[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase.rpc("get_pending_invites")
-  if (error) console.error(error)
-  return data ?? []
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const uid = user.id
+
+  return unstable_cache(
+    async () => {
+      const client = await createClient()
+      const { data, error } = await client.rpc("get_pending_invites")
+      if (error) console.error(error)
+      return data ?? []
+    },
+    [`pending-invites-${uid}`],
+    {
+      tags: [`${uid}-influencers`],
+      revalidate: 120, // convites mudam com mais frequência
+    }
+  )()
 }
 
 export async function getInfluencerByCode(code: string) {
@@ -45,6 +61,9 @@ export async function setBusinessInfluencer(invite_code: string) {
     return { success: false, error: isDuplicate ? "duplicate_invite" as const : "unknown" as const }
   }
 
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) revalidateTag(`${user.id}-influencers`)
+
   return { success: true, error: null }
 }
 
@@ -52,15 +71,37 @@ export async function cancelInvite(influencer_id: string) {
   const supabase = await createClient()
   const { error } = await supabase
     .rpc('cancel_business_invite', { p_influencer_id: influencer_id })
+
+  if (!error) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) revalidateTag(`${user.id}-influencers`)
+  }
+
   return { success: !error, error: error?.message ?? null }
 }
 
 export default async function getInfluencersData(month?: string) {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .rpc("get_business_influencers", { p_month: month ?? null })
-  if (error) console.error(error)
-  return data ?? []
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const uid = user.id
+  const monthKey = month ?? 'current'
+
+  return unstable_cache(
+    async () => {
+      const client = await createClient()
+      const { data, error } = await client
+        .rpc("get_business_influencers", { p_month: month ?? null })
+      if (error) console.error(error)
+      return data ?? []
+    },
+    [`influencers-${uid}-${monthKey}`],
+    {
+      tags: [`${uid}-orders`, `${uid}-influencers`],
+      revalidate: 300,
+    }
+  )()
 }
 
 export async function addCoupon(influencer_id: string, code: string, valueC: number) {

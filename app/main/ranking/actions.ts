@@ -1,7 +1,7 @@
 "use server"
 
+import { unstable_cache, revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from "@/lib/supabase/server"
-import { revalidatePath } from "next/cache"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -59,31 +59,45 @@ export async function getRankingData(): Promise<{
   influencers: ConnectedInfluencer[]
 }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ranking: [], campaigns: [], influencers: [] }
 
-  const [
-    { data: ranking },
-    { data: campaigns },
-    { data: influencers },
-  ] = await Promise.all([
-    supabase.rpc("get_business_top_influencers", { p_limit: 50 }),
-    supabase.rpc("get_business_campaigns"),
-    // influencers conectados para o sheet de criação de campanha
-    supabase.rpc("get_business_connected_influencers")
-  ])
+  const uid = user.id
 
-  const mappedInfluencers: ConnectedInfluencer[] = (influencers ?? []).map((inf: any) => ({
-    id:         inf.id,
-    name:       inf.name,
-    avatar_url: inf.avatar_url,
-    coupon:     inf.coupon,
-    coupon_id:  inf.coupon_id,  // adiciona no tipo também
-  }))
+  return unstable_cache(
+    async () => {
+      const client = await createClient()
 
-  return {
-    ranking:     ranking ?? [],
-    campaigns:   Array.isArray(campaigns) ? campaigns : [],
-    influencers: mappedInfluencers,
-  }
+      const [
+        { data: ranking },
+        { data: campaigns },
+        { data: influencers },
+      ] = await Promise.all([
+        client.rpc("get_business_top_influencers", { p_limit: 50 }),
+        client.rpc("get_business_campaigns"),
+        client.rpc("get_business_connected_influencers"),
+      ])
+
+      const mappedInfluencers: ConnectedInfluencer[] = (influencers ?? []).map((inf: any) => ({
+        id:         inf.id,
+        name:       inf.name,
+        avatar_url: inf.avatar_url,
+        coupon:     inf.coupon,
+        coupon_id:  inf.coupon_id,
+      }))
+
+      return {
+        ranking:     ranking ?? [],
+        campaigns:   Array.isArray(campaigns) ? campaigns : [],
+        influencers: mappedInfluencers,
+      }
+    },
+    [`ranking-${uid}`],
+    {
+      tags: [`${uid}-orders`, `${uid}-ranking`],
+      revalidate: 300,
+    }
+  )()
 }
 
 // ── Mutations ─────────────────────────────────────────────────────────────────
@@ -137,6 +151,8 @@ export async function createCampaign(input: CreateCampaignInput) {
     if (participantsError) throw new Error(participantsError.message)
   }
 
-  revalidatePath("/ranking")
+  // Invalida cache do ranking deste business
+  revalidateTag(`${user.id}-ranking`)
+  revalidatePath("/main/ranking") // fallback para compatibilidade
   return { success: true, id: campaign.id }
 }
