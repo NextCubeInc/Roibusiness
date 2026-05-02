@@ -17,5 +17,7 @@ export default async function DashboardPage({
 
   const data = await getDashboardData(days, months, 10)
 
+  if (!data) return null
+
   return <DashboardClient {...data} />
 }
