@@ -2,6 +2,7 @@
 
 import { unstable_cache, revalidateTag } from 'next/cache'
 import { createClient } from "@/lib/supabase/server"
+import { createCachedClient } from "@/lib/supabase/cached-client"
 
 export type PendingInvite = {
   influencer_id: string
@@ -13,14 +14,15 @@ export type PendingInvite = {
 
 export async function getPendingInvites(): Promise<PendingInvite[]> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return []
 
-  const uid = user.id
+  const uid         = session.user.id
+  const accessToken = session.access_token
 
   return unstable_cache(
     async () => {
-      const client = await createClient()
+      const client = createCachedClient(accessToken) // closure, não argumento
       const { data, error } = await client.rpc("get_pending_invites")
       if (error) console.error(error)
       return data ?? []
@@ -28,7 +30,7 @@ export async function getPendingInvites(): Promise<PendingInvite[]> {
     [`pending-invites-${uid}`],
     {
       tags: [`${uid}-influencers`],
-      revalidate: 120, // convites mudam com mais frequência
+      revalidate: 120,
     }
   )()
 }
@@ -82,15 +84,16 @@ export async function cancelInvite(influencer_id: string) {
 
 export default async function getInfluencersData(month?: string) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return []
 
-  const uid = user.id
-  const monthKey = month ?? 'current'
+  const uid         = session.user.id
+  const accessToken = session.access_token
+  const monthKey    = month ?? 'current'
 
   return unstable_cache(
     async () => {
-      const client = await createClient()
+      const client = createCachedClient(accessToken) // closure, não argumento
       const { data, error } = await client
         .rpc("get_business_influencers", { p_month: month ?? null })
       if (error) console.error(error)

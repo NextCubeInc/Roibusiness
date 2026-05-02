@@ -2,6 +2,7 @@
 
 import { unstable_cache, revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from "@/lib/supabase/server"
+import { createCachedClient } from "@/lib/supabase/cached-client"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -59,14 +60,15 @@ export async function getRankingData(): Promise<{
   influencers: ConnectedInfluencer[]
 }> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { ranking: [], campaigns: [], influencers: [] }
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return { ranking: [], campaigns: [], influencers: [] }
 
-  const uid = user.id
+  const uid         = session.user.id
+  const accessToken = session.access_token
 
   return unstable_cache(
     async () => {
-      const client = await createClient()
+      const client = createCachedClient(accessToken) // closure, não argumento
 
       const [
         { data: ranking },

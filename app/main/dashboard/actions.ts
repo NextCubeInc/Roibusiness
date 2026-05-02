@@ -2,22 +2,26 @@
 
 import { unstable_cache } from 'next/cache'
 import { createClient } from "@/lib/supabase/server"
+import { createCachedClient } from "@/lib/supabase/cached-client"
 
 export async function getDashboardData(
   p_days: 7 | 15 | 30 = 7,
   p_months: 3 | 6 | 12 = 6,
   p_limit: number = 10
 ) {
-  // Precisamos do userId FORA do cache para compor a cache key por usuário
+  // cookies() deve ser chamado FORA do unstable_cache
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return null
 
-  const uid = user.id
+  const uid         = session.user.id
+  const accessToken = session.access_token
 
+  // Token capturado em closure — NÃO passa como argumento para não entrar na cache key
+  // Se passado como argumento, cada rotação de JWT = cache miss = vai ao banco de novo
   return unstable_cache(
     async () => {
-      const client = await createClient()
+      const client = createCachedClient(accessToken)
 
       const [
         { data: kpis },
@@ -38,7 +42,7 @@ export async function getDashboardData(
     [`dashboard-${uid}-d${p_days}-m${p_months}`],
     {
       tags: [`${uid}-orders`, `${uid}-dashboard`],
-      revalidate: 300, // fallback: revalida a cada 5 min mesmo sem trigger
+      revalidate: 300,
     }
   )()
 }
