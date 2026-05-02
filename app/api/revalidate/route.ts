@@ -31,10 +31,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Invalida todas as tags de cache do business
-  revalidateTag(`${business_id}-orders`)
-  revalidateTag(`${business_id}-dashboard`)
-  revalidateTag(`${business_id}-ranking`)
-  revalidateTag(`${business_id}-influencers`)
+  revalidateTag(`${business_id}-orders`, {})
+  revalidateTag(`${business_id}-dashboard`, {})
+  revalidateTag(`${business_id}-ranking`, {})
+  revalidateTag(`${business_id}-influencers`, {})
 
   return NextResponse.json({ revalidated: true, business_id })
 }

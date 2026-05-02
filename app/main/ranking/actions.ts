@@ -152,7 +152,7 @@ export async function createCampaign(input: CreateCampaignInput) {
   }
 
   // Invalida cache do ranking deste business
-  revalidateTag(`${user.id}-ranking`)
+  revalidateTag(`${user.id}-ranking`, {})
   revalidatePath("/main/ranking") // fallback para compatibilidade
   return { success: true, id: campaign.id }
 }

@@ -62,7 +62,7 @@ export async function setBusinessInfluencer(invite_code: string) {
   }
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (user) revalidateTag(`${user.id}-influencers`)
+  if (user) revalidateTag(`${user.id}-influencers`, {})
 
   return { success: true, error: null }
 }
@@ -74,7 +74,7 @@ export async function cancelInvite(influencer_id: string) {
 
   if (!error) {
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) revalidateTag(`${user.id}-influencers`)
+    if (user) revalidateTag(`${user.id}-influencers`, {})
   }
 
   return { success: !error, error: error?.message ?? null }
