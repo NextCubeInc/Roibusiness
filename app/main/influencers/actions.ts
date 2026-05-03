@@ -152,6 +152,22 @@ export async function addCouponCommission(
   return { success: !error, id: data as string | null, error: error?.message }
 }
 
+export async function updateCouponCommission(
+  commission_id: string,
+  percent:       number,
+  validFrom?:    string,
+  validTo?:      string,
+) {
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('update_coupon_commission', {
+    p_commission_id:      commission_id,
+    p_commission_percent: percent,
+    p_valid_from:         validFrom ?? null,
+    p_valid_to:           validTo   ?? null,
+  })
+  return { success: !error, error: error?.message }
+}
+
 export async function deleteCouponCommission(commission_id: string) {
   const supabase = await createClient()
   const { error } = await supabase

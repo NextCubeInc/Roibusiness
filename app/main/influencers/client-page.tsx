@@ -19,7 +19,7 @@ import { LayoutDashboard, Pen, Plus, Trash2, Loader2, Clock, X, CalendarIcon } f
 import { useState, useTransition } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { getInfluencerByCode, setBusinessInfluencer, cancelInvite, addCoupon, addCouponCommission, deleteCouponCommission, toggleCoupon, deleteCoupon, removeBusinessInfluencer, getPendingInvites } from "./actions"
+import { getInfluencerByCode, setBusinessInfluencer, cancelInvite, addCoupon, addCouponCommission, updateCouponCommission, deleteCouponCommission, toggleCoupon, deleteCoupon, removeBusinessInfluencer, getPendingInvites } from "./actions"
 import type { PendingInvite } from "./actions"
 import getInfluencersData from "./actions"
 
@@ -148,6 +148,11 @@ export default function ClientPage({
   const [newPeriodFrom, setNewPeriodFrom]         = useState<Date | undefined>(undefined)
   const [newPeriodTo, setNewPeriodTo]             = useState<Date | undefined>(undefined)
   const [loadingPeriod, setLoadingPeriod]         = useState(false)
+
+  // Editar período de comissão existente
+  type EditingPeriod = { id: string; couponId: string; percent: number; from: Date | undefined; to: Date | undefined }
+  const [editingPeriod, setEditingPeriod]         = useState<EditingPeriod | null>(null)
+  const [savingPeriod, setSavingPeriod]           = useState(false)
 
   // Remover influencer
   const [removingInfluencer, setRemovingInfluencer] = useState<string | null>(null)
@@ -299,6 +304,43 @@ export default function ClientPage({
     setLoadingPeriod(false)
   }
 
+  async function handleSavePeriod() {
+    if (!editingPeriod) return
+    setSavingPeriod(true)
+    const result = await updateCouponCommission(
+      editingPeriod.id,
+      editingPeriod.percent,
+      editingPeriod.from ? editingPeriod.from.toISOString() : undefined,
+      editingPeriod.to   ? editingPeriod.to.toISOString()   : undefined,
+    )
+    if (result.success) {
+      setInfluencers(prev =>
+        prev.map(inf => ({
+          ...inf,
+          coupons: (inf.coupons ?? []).map(c =>
+            c.id === editingPeriod.couponId
+              ? {
+                  ...c,
+                  commissions: (c.commissions ?? []).map(p =>
+                    p.id === editingPeriod.id
+                      ? {
+                          ...p,
+                          percent:    editingPeriod.percent,
+                          valid_from: editingPeriod.from?.toISOString() ?? null,
+                          valid_to:   editingPeriod.to?.toISOString()   ?? null,
+                        }
+                      : p
+                  ),
+                }
+              : c
+          ),
+        }))
+      )
+      setEditingPeriod(null)
+    }
+    setSavingPeriod(false)
+  }
+
   async function handleDeletePeriod(couponId: string, commissionId: string) {
     await deleteCouponCommission(commissionId)
     setInfluencers(prev =>
@@ -439,27 +481,112 @@ export default function ClientPage({
                         <p className="text-xs text-muted-foreground px-3 py-2">Sem períodos cadastrados.</p>
                       )}
                       {(c.commissions ?? []).map(p => (
-                        <div key={p.id} className="flex items-center justify-between px-3 py-2 gap-2">
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-sm font-medium">{p.percent ?? 0}%</span>
-                            <span className="text-[11px] text-muted-foreground">
-                              {p.valid_from
-                                ? format(new Date(p.valid_from), "dd/MM/yyyy", { locale: ptBR })
-                                : "Início"
-                              }
-                              {" → "}
-                              {p.valid_to
-                                ? format(new Date(p.valid_to), "dd/MM/yyyy", { locale: ptBR })
-                                : <span className="text-green-500 font-medium">em aberto</span>
-                              }
-                            </span>
-                          </div>
-                          <Button
-                            variant="ghost" size="icon" className="h-7 w-7 shrink-0"
-                            onClick={() => handleDeletePeriod(c.id, p.id)}
-                          >
-                            <Trash2 size={13} color="#C62828" />
-                          </Button>
+                        <div key={p.id} className="flex flex-col border-b last:border-b-0">
+                          {editingPeriod?.id === p.id ? (
+                            /* ── Modo edição ── */
+                            <div className="flex flex-col gap-2 px-3 py-3 bg-muted/20">
+                              <div className="flex gap-2 items-center">
+                                <div className="relative w-24">
+                                  <Input
+                                    type="number" min={0} max={100}
+                                    className="font-mono pr-6 h-8 text-sm"
+                                    value={editingPeriod.percent}
+                                    onChange={e => setEditingPeriod(prev => prev ? { ...prev, percent: Number(e.target.value) } : null)}
+                                    autoFocus
+                                  />
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                                </div>
+
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button variant="outline" className="h-8 px-2 text-xs font-normal justify-start min-w-[110px]">
+                                      <CalendarIcon className="mr-1.5 h-3 w-3 text-muted-foreground shrink-0" />
+                                      {editingPeriod.from
+                                        ? format(editingPeriod.from, "dd/MM/yyyy")
+                                        : <span className="text-muted-foreground">De</span>
+                                      }
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={editingPeriod.from}
+                                      onSelect={d => setEditingPeriod(prev => prev ? { ...prev, from: d } : null)}
+                                      locale={ptBR}
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button variant="outline" className="h-8 px-2 text-xs font-normal justify-start min-w-[110px]">
+                                      <CalendarIcon className="mr-1.5 h-3 w-3 text-muted-foreground shrink-0" />
+                                      {editingPeriod.to
+                                        ? format(editingPeriod.to, "dd/MM/yyyy")
+                                        : <span className="text-muted-foreground">Até</span>
+                                      }
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={editingPeriod.to}
+                                      onSelect={d => setEditingPeriod(prev => prev ? { ...prev, to: d } : null)}
+                                      locale={ptBR}
+                                      disabled={(d) => editingPeriod.from ? d < editingPeriod.from : false}
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+
+                              <div className="flex gap-2">
+                                <Button size="sm" className="flex-1 h-8" onClick={handleSavePeriod} disabled={savingPeriod}>
+                                  {savingPeriod ? <Loader2 size={14} className="animate-spin" /> : "Salvar"}
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditingPeriod(null)}>
+                                  Cancelar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* ── Modo leitura ── */
+                            <div className="flex items-center justify-between px-3 py-2 gap-2">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-sm font-medium">{p.percent ?? 0}%</span>
+                                <span className="text-[11px] text-muted-foreground">
+                                  {p.valid_from
+                                    ? format(new Date(p.valid_from), "dd/MM/yyyy", { locale: ptBR })
+                                    : "Início"
+                                  }
+                                  {" → "}
+                                  {p.valid_to
+                                    ? format(new Date(p.valid_to), "dd/MM/yyyy", { locale: ptBR })
+                                    : <span className="text-green-500 font-medium">em aberto</span>
+                                  }
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <Button
+                                  variant="ghost" size="icon" className="h-7 w-7"
+                                  onClick={() => setEditingPeriod({
+                                    id:       p.id,
+                                    couponId: c.id,
+                                    percent:  p.percent ?? 0,
+                                    from:     p.valid_from ? new Date(p.valid_from) : undefined,
+                                    to:       p.valid_to   ? new Date(p.valid_to)   : undefined,
+                                  })}
+                                >
+                                  <Pen size={12} className="text-muted-foreground" />
+                                </Button>
+                                <Button
+                                  variant="ghost" size="icon" className="h-7 w-7"
+                                  onClick={() => handleDeletePeriod(c.id, p.id)}
+                                >
+                                  <Trash2 size={13} color="#C62828" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
 
