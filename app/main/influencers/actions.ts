@@ -82,24 +82,35 @@ export async function cancelInvite(influencer_id: string) {
   return { success: !error, error: error?.message ?? null }
 }
 
-export default async function getInfluencersData(month?: string) {
+export default async function getInfluencersData(
+  month?: string,
+  dateFrom?: string,
+  dateTo?: string,
+) {
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return []
 
   const uid         = session.user.id
   const accessToken = session.access_token
-  const monthKey    = month ?? 'current'
+
+  const isRange  = !!dateFrom && !!dateTo
+  const cacheKey = isRange
+    ? `influencers-${uid}-${dateFrom}_${dateTo}`
+    : `influencers-${uid}-${month ?? 'current'}`
 
   return unstable_cache(
     async () => {
       const client = createCachedClient(accessToken) // closure, não argumento
+      const rpcParams = isRange
+        ? { p_month: null as string | null, p_date_from: dateFrom!, p_date_to: dateTo! }
+        : { p_month: month ?? null }
       const { data, error } = await client
-        .rpc("get_business_influencers", { p_month: month ?? null })
+        .rpc("get_business_influencers", rpcParams)
       if (error) console.error(error)
       return data ?? []
     },
-    [`influencers-${uid}-${monthKey}`],
+    [cacheKey],
     {
       tags: [`${uid}-orders`, `${uid}-influencers`],
       revalidate: 300,
@@ -107,11 +118,45 @@ export default async function getInfluencersData(month?: string) {
   )()
 }
 
-export async function addCoupon(influencer_id: string, code: string, valueC: number) {
+export async function addCoupon(
+  influencer_id: string,
+  code:          string,
+  valueC:        number,
+  validFrom?:    string,
+  validTo?:      string,
+) {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .rpc('add_coupon', { p_influencer_id: influencer_id, p_code: code, p_commission_percent: valueC })
+  const { data, error } = await supabase.rpc('add_coupon', {
+    p_influencer_id:      influencer_id,
+    p_code:               code,
+    p_commission_percent: valueC,
+    ...(validFrom ? { p_valid_from: validFrom } : {}),
+    ...(validTo   ? { p_valid_to:   validTo   } : {}),
+  })
   return { success: !error, id: data as string | null, error: error?.message }
+}
+
+export async function addCouponCommission(
+  coupon_id: string,
+  percent:   number,
+  validFrom?: string,
+  validTo?:   string,
+) {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('add_coupon_commission', {
+    p_coupon_id:          coupon_id,
+    p_commission_percent: percent,
+    ...(validFrom ? { p_valid_from: validFrom } : {}),
+    ...(validTo   ? { p_valid_to:   validTo   } : {}),
+  })
+  return { success: !error, id: data as string | null, error: error?.message }
+}
+
+export async function deleteCouponCommission(commission_id: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .rpc('delete_coupon_commission', { p_commission_id: commission_id })
+  return { success: !error }
 }
 
 export async function toggleCoupon(coupon_id: string, is_active: boolean) {
@@ -125,5 +170,12 @@ export async function deleteCoupon(coupon_id: string) {
   const supabase = await createClient()
   const { error } = await supabase
     .rpc('delete_coupon', { p_coupon_id: coupon_id })
+  return { success: !error }
+}
+
+export async function removeBusinessInfluencer(influencer_id: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .rpc('remove_business_influencer', { p_influencer_id: influencer_id })
   return { success: !error }
 }

@@ -13,19 +13,31 @@ import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { LayoutDashboard, Pen, Plus, Trash2, Loader2, Clock, X } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { LayoutDashboard, Pen, Plus, Trash2, Loader2, Clock, X, CalendarIcon } from "lucide-react"
 import { useState, useTransition } from "react"
-import { getInfluencerByCode, setBusinessInfluencer, cancelInvite, addCoupon, toggleCoupon, deleteCoupon, getPendingInvites } from "./actions"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { getInfluencerByCode, setBusinessInfluencer, cancelInvite, addCoupon, addCouponCommission, deleteCouponCommission, toggleCoupon, deleteCoupon, removeBusinessInfluencer, getPendingInvites } from "./actions"
 import type { PendingInvite } from "./actions"
 import getInfluencersData from "./actions"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Coupon = {
+type CommissionPeriod = {
   id:         string
-  code:       string | null
-  is_active:  boolean
-  commission: number | null
+  percent:    number | null
+  valid_from: string | null   // ISO timestamptz
+  valid_to:   string | null   // null = ativo (sem fim)
+}
+
+type Coupon = {
+  id:          string
+  code:        string | null
+  is_active:   boolean
+  commission:  number | null          // comissão ativa (para exibição na tabela)
+  commissions: CommissionPeriod[]     // todos os períodos
 }
 
 type InfluencerRow = {
@@ -56,20 +68,35 @@ function formatDate(iso: string) {
   })
 }
 
-function monthOptions() {
-  const opts: { value: string; label: string }[] = []
+const MONTH_NAMES = [
+  { value: "01", label: "Janeiro" },
+  { value: "02", label: "Fevereiro" },
+  { value: "03", label: "Março" },
+  { value: "04", label: "Abril" },
+  { value: "05", label: "Maio" },
+  { value: "06", label: "Junho" },
+  { value: "07", label: "Julho" },
+  { value: "08", label: "Agosto" },
+  { value: "09", label: "Setembro" },
+  { value: "10", label: "Outubro" },
+  { value: "11", label: "Novembro" },
+  { value: "12", label: "Dezembro" },
+]
+
+function yearOptions() {
   const now = new Date()
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-    const label = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
-    opts.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) })
+  const opts: { value: string }[] = []
+  for (let i = 0; i < 5; i++) {
+    opts.push({ value: String(now.getFullYear() - i) })
   }
   return opts
 }
 
-const MONTHS = monthOptions()
-const CURRENT_MONTH = MONTHS[0].value
+const YEARS = yearOptions()
+const NOW   = new Date()
+const CURRENT_MONTH_NUM = String(NOW.getMonth() + 1).padStart(2, "0")
+const CURRENT_YEAR      = String(NOW.getFullYear())
+const CURRENT_MONTH     = `${CURRENT_YEAR}-${CURRENT_MONTH_NUM}`
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -85,7 +112,13 @@ export default function ClientPage({
 
   const [influencers, setInfluencers]   = useState<InfluencerRow[]>(initialInfluencers)
   const [pending, setPending]           = useState<PendingInvite[]>(initialPending)
-  const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH)
+  const [selectedMonthNum, setSelectedMonthNum] = useState(CURRENT_MONTH_NUM)
+  const [selectedYear, setSelectedYear]         = useState(CURRENT_YEAR)
+
+  // Filtro de período
+  const [filterMode, setFilterMode] = useState<"month" | "period">("month")
+  const [dateFrom, setDateFrom]     = useState<Date | undefined>(undefined)
+  const [dateTo, setDateTo]         = useState<Date | undefined>(undefined)
 
   // Sheet de convites pendentes
   const [invitesSheetOpen, setInvitesSheetOpen] = useState(false)
@@ -104,10 +137,20 @@ export default function ClientPage({
   const [editId, setEditId]               = useState<string | null>(null)
   const [newCouponCode, setNewCouponCode] = useState("")
   const [newCommission, setNewCommission] = useState<number>(0)
-  const [loadingCoupon, setLoadingCoupon] = useState(false)
+  const [newCouponFrom, setNewCouponFrom] = useState<Date | undefined>(undefined)
+  const [newCouponTo, setNewCouponTo]     = useState<Date | undefined>(undefined)
+  const [loadingCoupon, setLoadingCoupon]       = useState(false)
+  const [duplicateCouponError, setDuplicateCouponError] = useState(false)
 
-  // Edição de comissão inline
-  const [editingCommission, setEditingCommission] = useState<{ coupon_id: string; value: string } | null>(null)
+  // Adicionar período de comissão a cupom existente
+  const [addingPeriodFor, setAddingPeriodFor]     = useState<string | null>(null)
+  const [newPeriodPercent, setNewPeriodPercent]   = useState<number>(0)
+  const [newPeriodFrom, setNewPeriodFrom]         = useState<Date | undefined>(undefined)
+  const [newPeriodTo, setNewPeriodTo]             = useState<Date | undefined>(undefined)
+  const [loadingPeriod, setLoadingPeriod]         = useState(false)
+
+  // Remover influencer
+  const [removingInfluencer, setRemovingInfluencer] = useState<string | null>(null)
 
   const [search, setSearch] = useState("")
 
@@ -141,10 +184,33 @@ export default function ClientPage({
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  function handleMonthChange(month: string) {
-    setSelectedMonth(month)
+  function handleMonthChange(monthNum: string, year: string) {
+    const combined = `${year}-${monthNum}`
+    setSelectedMonthNum(monthNum)
+    setSelectedYear(year)
     startTransition(async () => {
-      const data = await getInfluencersData(month)
+      const data = await getInfluencersData(combined)
+      setInfluencers(data)
+    })
+  }
+
+  function handleFilterModeChange(mode: "month" | "period") {
+    setFilterMode(mode)
+    if (mode === "month") {
+      // Volta pro mês/ano selecionado
+      startTransition(async () => {
+        const data = await getInfluencersData(`${selectedYear}-${selectedMonthNum}`)
+        setInfluencers(data)
+      })
+    }
+  }
+
+  function handleDateRangeSearch() {
+    if (!dateFrom || !dateTo) return
+    const from = format(dateFrom, "yyyy-MM-dd")
+    const to   = format(dateTo,   "yyyy-MM-dd")
+    startTransition(async () => {
+      const data = await getInfluencersData(undefined, from, to)
       setInfluencers(data)
     })
   }
@@ -193,16 +259,58 @@ export default function ClientPage({
   async function handleAddCoupon() {
     if (!editId || !newCouponCode.trim()) return
     setLoadingCoupon(true)
-    const result = await addCoupon(editId, newCouponCode.trim().toUpperCase(), newCommission ?? 0)
-    if (result.success && result.id) {
-      localUpdateCoupons(editId, prev => [
-        ...prev,
-        { id: result.id!, code: newCouponCode.trim().toUpperCase(), is_active: true, commission: newCommission }
-      ])
+    setDuplicateCouponError(false)
+    const result = await addCoupon(
+      editId,
+      newCouponCode.trim().toUpperCase(),
+      newCommission ?? 0,
+      newCouponFrom ? newCouponFrom.toISOString() : undefined,
+      newCouponTo   ? newCouponTo.toISOString()   : undefined,
+    )
+    if (result.success) {
       setNewCouponCode("")
       setNewCommission(0)
+      setNewCouponFrom(undefined)
+      setNewCouponTo(undefined)
+      const data = await getInfluencersData(`${selectedYear}-${selectedMonthNum}`)
+      setInfluencers(data)
+    } else if (result.error?.includes("duplicate_coupon")) {
+      setDuplicateCouponError(true)
     }
     setLoadingCoupon(false)
+  }
+
+  async function handleAddPeriod(couponId: string) {
+    setLoadingPeriod(true)
+    const result = await addCouponCommission(
+      couponId,
+      newPeriodPercent,
+      newPeriodFrom ? newPeriodFrom.toISOString() : undefined,
+      newPeriodTo   ? newPeriodTo.toISOString()   : undefined,
+    )
+    if (result.success) {
+      setAddingPeriodFor(null)
+      setNewPeriodPercent(0)
+      setNewPeriodFrom(undefined)
+      setNewPeriodTo(undefined)
+      const data = await getInfluencersData(`${selectedYear}-${selectedMonthNum}`)
+      setInfluencers(data)
+    }
+    setLoadingPeriod(false)
+  }
+
+  async function handleDeletePeriod(couponId: string, commissionId: string) {
+    await deleteCouponCommission(commissionId)
+    setInfluencers(prev =>
+      prev.map(inf => ({
+        ...inf,
+        coupons: (inf.coupons ?? []).map(c =>
+          c.id === couponId
+            ? { ...c, commissions: (c.commissions ?? []).filter(p => p.id !== commissionId) }
+            : c
+        ),
+      }))
+    )
   }
 
   async function handleToggleCoupon(coupon: Coupon) {
@@ -217,6 +325,13 @@ export default function ClientPage({
     if (!editId) return
     await deleteCoupon(coupon_id)
     localUpdateCoupons(editId, prev => prev.filter(c => c.id !== coupon_id))
+  }
+
+  async function handleRemoveInfluencer(influencer_id: string) {
+    setRemovingInfluencer(influencer_id)
+    await removeBusinessInfluencer(influencer_id)
+    setInfluencers(prev => prev.filter(i => i.influencer_id !== influencer_id))
+    setRemovingInfluencer(null)
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -294,67 +409,150 @@ export default function ClientPage({
 
           {editingInfluencer && (
             <div className="flex flex-col gap-6 overflow-y-auto flex-1">
-              <div className="flex flex-col gap-2">
+
+              {/* ── Lista de cupons ── */}
+              <div className="flex flex-col gap-3">
                 <Label>Cupons cadastrados</Label>
                 {(editingInfluencer.coupons ?? []).length === 0 && (
                   <p className="text-sm text-muted-foreground">Nenhum cupom cadastrado.</p>
                 )}
                 {(editingInfluencer.coupons ?? []).map(c => (
-                  <div key={c.id} className="flex items-center justify-between border rounded-md px-3 py-2 gap-3">
-                    <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                      <span className="font-mono text-sm font-medium">{text(c.code)}</span>
-                      <div className="flex items-center gap-1.5">
-                        {editingCommission?.coupon_id === c.id ? (
-                          <div className="flex items-center gap-1">
-                            <Input
-                              type="number" min={0} max={100}
-                              className="h-6 w-16 text-xs px-2"
-                              value={editingCommission.value}
-                              onChange={e => setEditingCommission({ coupon_id: c.id, value: e.target.value })}
-                              autoFocus
-                            />
-                            <span className="text-xs text-muted-foreground">%</span>
-                            <Button size="sm" className="h-6 px-2 text-xs" onClick={async () => {
-                              const newVal = Number(editingCommission.value)
-                              localUpdateCoupons(editId!, prev =>
-                                prev.map(x => x.id === c.id ? { ...x, commission: newVal } : x)
-                              )
-                              setEditingCommission(null)
-                            }}>OK</Button>
-                            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs"
-                              onClick={() => setEditingCommission(null)}>✕</Button>
-                          </div>
-                        ) : (
-                          <button className="flex items-center gap-1 group"
-                            onClick={() => setEditingCommission({ coupon_id: c.id, value: String(c.commission ?? 0) })}>
-                            <span className="text-xs text-muted-foreground">
-                              {c.commission != null ? `${c.commission}% comissão` : "Sem comissão"}
-                            </span>
-                            <Pen size={10} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                        )}
+                  <div key={c.id} className="flex flex-col border rounded-lg overflow-hidden">
+
+                    {/* Cabeçalho do cupom */}
+                    <div className="flex items-center justify-between px-3 py-2 bg-muted/30">
+                      <span className="font-mono text-sm font-semibold">{text(c.code)}</span>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={c.is_active} onCheckedChange={() => handleToggleCoupon(c)} />
+                        <Button
+                          variant="ghost" size="icon" className="h-7 w-7"
+                          onClick={() => handleDeleteCoupon(c.id)}
+                        >
+                          <Trash2 size={13} color="#C62828" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Switch checked={c.is_active} onCheckedChange={() => handleToggleCoupon(c)} />
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteCoupon(c.id)}>
-                        <Trash2 size={14} color="#C62828" />
-                      </Button>
+
+                    {/* Períodos de comissão */}
+                    <div className="flex flex-col divide-y">
+                      {(c.commissions ?? []).length === 0 && (
+                        <p className="text-xs text-muted-foreground px-3 py-2">Sem períodos cadastrados.</p>
+                      )}
+                      {(c.commissions ?? []).map(p => (
+                        <div key={p.id} className="flex items-center justify-between px-3 py-2 gap-2">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm font-medium">{p.percent ?? 0}%</span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {p.valid_from
+                                ? format(new Date(p.valid_from), "dd/MM/yyyy", { locale: ptBR })
+                                : "Início"
+                              }
+                              {" → "}
+                              {p.valid_to
+                                ? format(new Date(p.valid_to), "dd/MM/yyyy", { locale: ptBR })
+                                : <span className="text-green-500 font-medium">em aberto</span>
+                              }
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+                            onClick={() => handleDeletePeriod(c.id, p.id)}
+                          >
+                            <Trash2 size={13} color="#C62828" />
+                          </Button>
+                        </div>
+                      ))}
+
+                      {/* Form de novo período */}
+                      {addingPeriodFor === c.id ? (
+                        <div className="flex flex-col gap-2 px-3 py-3 bg-muted/20">
+                          <div className="flex gap-2 items-center">
+                            <div className="relative w-24">
+                              <Input
+                                type="number" min={0} max={100}
+                                className="font-mono pr-6 h-8 text-sm"
+                                placeholder="0"
+                                value={newPeriodPercent}
+                                onChange={e => setNewPeriodPercent(Number(e.target.value))}
+                                autoFocus
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                            </div>
+
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className="h-8 px-2 text-xs font-normal justify-start min-w-[110px]">
+                                  <CalendarIcon className="mr-1.5 h-3 w-3 text-muted-foreground shrink-0" />
+                                  {newPeriodFrom
+                                    ? format(newPeriodFrom, "dd/MM/yyyy")
+                                    : <span className="text-muted-foreground">De</span>
+                                  }
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={newPeriodFrom} onSelect={setNewPeriodFrom} locale={ptBR} />
+                              </PopoverContent>
+                            </Popover>
+
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className="h-8 px-2 text-xs font-normal justify-start min-w-[110px]">
+                                  <CalendarIcon className="mr-1.5 h-3 w-3 text-muted-foreground shrink-0" />
+                                  {newPeriodTo
+                                    ? format(newPeriodTo, "dd/MM/yyyy")
+                                    : <span className="text-muted-foreground">Até</span>
+                                  }
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single" selected={newPeriodTo} onSelect={setNewPeriodTo} locale={ptBR}
+                                  disabled={(d) => newPeriodFrom ? d < newPeriodFrom : false}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm" className="flex-1 h-8"
+                              onClick={() => handleAddPeriod(c.id)}
+                              disabled={loadingPeriod}
+                            >
+                              {loadingPeriod ? <Loader2 size={14} className="animate-spin" /> : "Salvar período"}
+                            </Button>
+                            <Button
+                              size="sm" variant="ghost" className="h-8"
+                              onClick={() => { setAddingPeriodFor(null); setNewPeriodPercent(0); setNewPeriodFrom(undefined); setNewPeriodTo(undefined) }}
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          className="flex items-center gap-1.5 px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors text-left"
+                          onClick={() => { setAddingPeriodFor(c.id); setNewPeriodPercent(0); setNewPeriodFrom(undefined); setNewPeriodTo(undefined) }}
+                        >
+                          <Plus size={12} />
+                          Adicionar período
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
 
+              {/* ── Adicionar cupom ── */}
               <div className="flex flex-col gap-2">
                 <Label>Adicionar cupom</Label>
                 <Input
                   placeholder="Ex: GABRIEL10"
                   value={newCouponCode}
-                  onChange={e => setNewCouponCode(e.target.value.toUpperCase())}
-                  className="font-mono"
-                  onKeyDown={e => e.key === "Enter" && handleAddCoupon()}
+                  onChange={e => { setNewCouponCode(e.target.value.toUpperCase()); setDuplicateCouponError(false) }}
+                  className={`font-mono ${duplicateCouponError ? "border-destructive" : ""}`}
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <div className="relative flex-1">
                     <Input
                       placeholder="Comissão %"
@@ -365,11 +563,53 @@ export default function ClientPage({
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
                   </div>
-                  <Button onClick={handleAddCoupon} disabled={loadingCoupon || !newCouponCode.trim()}>
-                    {loadingCoupon ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                  </Button>
                 </div>
+
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="flex-1 justify-start font-normal text-sm h-9">
+                        <CalendarIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        {newCouponFrom ? format(newCouponFrom, "dd/MM/yyyy") : <span className="text-muted-foreground">De (opcional)</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={newCouponFrom} onSelect={setNewCouponFrom} locale={ptBR} />
+                    </PopoverContent>
+                  </Popover>
+
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="flex-1 justify-start font-normal text-sm h-9">
+                        <CalendarIcon className="mr-2 h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        {newCouponTo ? format(newCouponTo, "dd/MM/yyyy") : <span className="text-muted-foreground">Até (opcional)</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single" selected={newCouponTo} onSelect={setNewCouponTo} locale={ptBR}
+                        disabled={(d) => newCouponFrom ? d < newCouponFrom : false}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {duplicateCouponError && (
+                  <p className="text-xs text-destructive">
+                    Este código já está cadastrado nesta conta.
+                  </p>
+                )}
+
+                <Button
+                  onClick={handleAddCoupon}
+                  disabled={loadingCoupon || !newCouponCode.trim()}
+                  className="w-full"
+                >
+                  {loadingCoupon ? <Loader2 size={16} className="animate-spin mr-2" /> : <Plus size={16} className="mr-2" />}
+                  Adicionar cupom
+                </Button>
               </div>
+
             </div>
           )}
         </SheetContent>
@@ -477,24 +717,136 @@ export default function ClientPage({
         </div>
 
         {/* ── Filtros ── */}
-        <div className="flex gap-3">
-          <Input
-            placeholder="Buscar influencer..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="max-w-xs"
-          />
-          <Select value={selectedMonth} onValueChange={handleMonthChange}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MONTHS.map(m => (
-                <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground self-center" />}
+        <div className="flex flex-col gap-3">
+
+          {/* Toggle de modo */}
+          <div className="flex items-center gap-5">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name="filter-mode"
+                checked={filterMode === "month"}
+                onChange={() => handleFilterModeChange("month")}
+                className="accent-primary"
+              />
+              <span className="text-sm text-muted-foreground">Mês / Ano</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name="filter-mode"
+                checked={filterMode === "period"}
+                onChange={() => handleFilterModeChange("period")}
+                className="accent-primary"
+              />
+              <span className="text-sm text-muted-foreground">Período personalizado</span>
+            </label>
+          </div>
+
+          {/* Inputs */}
+          <div className="flex gap-3 items-center flex-wrap">
+            <Input
+              placeholder="Buscar influencer..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="max-w-xs"
+            />
+
+            {filterMode === "month" ? (
+              <div className="flex gap-2">
+                <Select
+                  value={selectedMonthNum}
+                  onValueChange={v => handleMonthChange(v, selectedYear)}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTH_NAMES.map(m => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={selectedYear}
+                  onValueChange={v => handleMonthChange(selectedMonthNum, v)}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {YEARS.map(y => (
+                      <SelectItem key={y.value} value={y.value}>{y.value}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* De */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[150px] justify-start font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+                      {dateFrom
+                        ? format(dateFrom, "dd/MM/yyyy")
+                        : <span className="text-muted-foreground">De</span>
+                      }
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={setDateFrom}
+                      locale={ptBR}
+                      disabled={(d) => d > new Date()}
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <span className="text-sm text-muted-foreground">até</span>
+
+                {/* Até */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[150px] justify-start font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+                      {dateTo
+                        ? format(dateTo, "dd/MM/yyyy")
+                        : <span className="text-muted-foreground">Até</span>
+                      }
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={setDateTo}
+                      locale={ptBR}
+                      disabled={(d) => d > new Date() || (dateFrom ? d < dateFrom : false)}
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <Button
+                  size="sm"
+                  onClick={handleDateRangeSearch}
+                  disabled={!dateFrom || !dateTo || isPending}
+                >
+                  {isPending
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : "Filtrar"
+                  }
+                </Button>
+              </div>
+            )}
+
+            {isPending && filterMode === "month" && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground self-center" />
+            )}
+          </div>
         </div>
 
         {/* ── Tabela ── */}
@@ -560,8 +912,15 @@ export default function ClientPage({
                   <Button variant="ghost" size="sm" onClick={() => setEditId(inf.influencer_id)}>
                     <Pen className="h-4 w-4" />
                   </Button>
-                  <Button variant="destructive" size="sm">
-                    <Trash2 className="h-4 w-4" color="#C62828" />
+                  <Button
+                    variant="ghost" size="sm"
+                    disabled={removingInfluencer === inf.influencer_id}
+                    onClick={() => handleRemoveInfluencer(inf.influencer_id)}
+                  >
+                    {removingInfluencer === inf.influencer_id
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <Trash2 className="h-4 w-4" color="#C62828" />
+                    }
                   </Button>
                 </TableCell>
               </TableRow>
