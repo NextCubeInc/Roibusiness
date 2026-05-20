@@ -11,7 +11,7 @@ export function RedirectTimer({ to, seconds = 3 }: { to: string; seconds?: numbe
       setCount((prev) => {
         if (prev <= 1) {
           clearInterval(interval)
-          router.push("/main/integrations")
+          router.push("/main/integracoes")
           return 0
         }
         return prev - 1
