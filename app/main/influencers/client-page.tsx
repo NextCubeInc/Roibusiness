@@ -102,9 +102,11 @@ const CURRENT_MONTH     = `${CURRENT_YEAR}-${CURRENT_MONTH_NUM}`
 
 export default function ClientPage({
   influencers: initialInfluencers,
+  topInfluencers: _topInfluencers,
   pendingInvites: initialPending,
 }: {
-  influencers:   InfluencerRow[]
+  influencers:    InfluencerRow[]
+  topInfluencers?: unknown[]
   pendingInvites: PendingInvite[]
 }) {
   const { open } = useSidebar()

@@ -34,7 +34,7 @@ export async function getDashboardData(
         client.rpc('get_business_sales_by_day', { p_days }),
         client.rpc('get_business_sales_by_month', { p_months }),
         client.rpc('get_business_last_orders', { p_limit }),
-        client.rpc('get_business_top_influencers'),
+        client.rpc('get_business_top_influencers', { p_limit: 5 }),
       ])
 
       return { kpis, dailyChart, monthlyChart, lastOrders, topInfluencers }

@@ -18,6 +18,7 @@ export type CampaignParticipant = {
   influencer_id:    string
   name:             string | null
   avatar_url:       string | null
+  coupon_id:        string | null
   coupon_code:      string | null
   total_sales:      number
   total_commission: number
@@ -111,6 +112,102 @@ export type CreateCampaignInput = {
   ends_at:      string | null
   prizes:       Prize[]
   influencers:  { influencer_id: string; coupon_id: string }[]
+}
+
+export type UpdateCampaignInput = {
+  id:          string
+  name:        string
+  description: string
+  starts_at:   string | null
+  ends_at:     string | null
+  prizes:      Prize[]
+  status:      string
+  influencers: { influencer_id: string; coupon_id: string }[]
+}
+
+export async function updateCampaign(input: UpdateCampaignInput) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Não autenticado")
+
+  // Atualiza campos da campanha
+  const { error } = await supabase
+    .from("campaigns")
+    .update({
+      name:        input.name,
+      description: input.description || null,
+      starts_at:   input.starts_at || null,
+      ends_at:     input.ends_at   || null,
+      prizes:      JSON.stringify(input.prizes),
+      status:      input.status,
+    })
+    .eq("id", input.id)
+    .eq("business_id", user.id)
+
+  if (error) throw new Error(error.message)
+
+  // Sincroniza participantes por coupon_id (um influencer pode ter N cupons na mesma campanha)
+  const { data: current } = await supabase
+    .from("campaign_participants")
+    .select("influencer_id, coupon_id")
+    .eq("campaign_id", input.id)
+
+  // Chave de comparação: coupon_id quando existe, senão influencer_id
+  const currentKeys = (current ?? []).map((p: { influencer_id: string; coupon_id: string | null }) =>
+    p.coupon_id ?? p.influencer_id
+  )
+  const newKeys = input.influencers.map((i) => i.coupon_id || i.influencer_id)
+
+  // Remove os que saíram
+  const toRemove = (current ?? []).filter((p: { influencer_id: string; coupon_id: string | null }) =>
+    !newKeys.includes(p.coupon_id ?? p.influencer_id)
+  )
+  for (const p of toRemove) {
+    const q = supabase
+      .from("campaign_participants")
+      .delete()
+      .eq("campaign_id", input.id)
+      .eq("influencer_id", p.influencer_id)
+    if (p.coupon_id) q.eq("coupon_id", p.coupon_id)
+    else q.is("coupon_id", null)
+    await q
+  }
+
+  // Adiciona os novos
+  const toAdd = input.influencers.filter((i) => !currentKeys.includes(i.coupon_id || i.influencer_id))
+  if (toAdd.length > 0) {
+    await supabase
+      .from("campaign_participants")
+      .insert(
+        toAdd.map((inf) => ({
+          campaign_id:   input.id,
+          influencer_id: inf.influencer_id,
+          coupon_id:     inf.coupon_id || null,
+          status:        "active",
+          joined_at:     new Date().toISOString(),
+        }))
+      )
+  }
+
+  revalidateTag(`${user.id}-ranking`, {})
+  return { success: true }
+}
+
+export async function deleteCampaign(campaign_id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Não autenticado")
+
+  const { error } = await supabase
+    .from("campaigns")
+    .delete()
+    .eq("id", campaign_id)
+    .eq("business_id", user.id)
+
+  if (error) throw new Error(error.message)
+
+  revalidateTag(`${user.id}-ranking`, {})
+  return { success: true }
 }
 
 export async function createCampaign(input: CreateCampaignInput) {

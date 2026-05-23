@@ -105,10 +105,17 @@ export default async function getInfluencersData(
       const rpcParams = isRange
         ? { p_month: null as string | null, p_date_from: dateFrom!, p_date_to: dateTo! }
         : { p_month: month ?? null }
-      const { data, error } = await client
-        .rpc("get_business_influencers", rpcParams)
+
+      const [
+        { data, error },
+        { data: topInfluencers },
+      ] = await Promise.all([
+        client.rpc("get_business_influencers", rpcParams),
+        client.rpc("get_business_top_influencers", { p_limit: 5 }),
+      ])
+
       if (error) console.error(error)
-      return data ?? []
+      return { influencers: data ?? [], topInfluencers: topInfluencers ?? [] }
     },
     [cacheKey],
     {

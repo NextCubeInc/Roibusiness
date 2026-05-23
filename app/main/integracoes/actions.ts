@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 
 export type StoreInfo = {
   id:         string
@@ -29,6 +29,46 @@ export async function nuvemShopLink(formData: FormData) {
   redirect(
     `https://${storeLink}/admin/apps/23570/authorize?state=${user.id}&redirect_uri=${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/Nuvemshop-Callback`
   )
+}
+
+export type PaymentFees = {
+  pix:                      number
+  credit_card_1x:           number
+  credit_card_installments: number
+  boleto:                   number
+  debit_card:               number
+  other:                    number
+}
+
+export async function getPaymentFees(): Promise<PaymentFees | null> {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return null
+  const { data } = await supabase
+    .from("store_payment_fees")
+    .select("pix, credit_card_1x, credit_card_installments, boleto, debit_card, other")
+    .eq("business_id", session.user.id)
+    .single()
+  return data
+}
+
+export async function savePaymentFees(fees: PaymentFees) {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return { success: false, error: "Sessão não encontrada" }
+  const { error } = await supabase
+    .from("store_payment_fees")
+    .upsert({ business_id: session.user.id, ...fees }, { onConflict: "business_id" })
+  if (error) return { success: false, error: error.message }
+
+  // Taxas afetam todos os cálculos de receita e comissão — invalida tudo
+  const uid = session.user.id
+  revalidateTag(`${uid}-dashboard`, {})
+  revalidateTag(`${uid}-orders`, {})
+  revalidateTag(`${uid}-ranking`, {})
+  revalidateTag(`${uid}-influencers`, {})
+
+  return { success: true }
 }
 
 export async function disconnectStore(store_id: string) {

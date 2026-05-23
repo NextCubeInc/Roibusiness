@@ -27,7 +27,23 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Table,
   TableBody,
@@ -45,12 +61,16 @@ import {
   Search,
   Loader2,
   Trophy,
+  MoreHorizontal,
+  Pencil,
 } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import {
   createCampaign,
+  updateCampaign,
+  deleteCampaign,
   type RankingRow,
   type Campaign,
   type ConnectedInfluencer,
@@ -79,7 +99,7 @@ function prizeLabel(prize: Prize): string {
       : `${prize.position_start}º–${prize.position_end}º lugar`
 
   const reward =
-    prize.reward_type === "valor"       ? `R$ ${prize.reward_value}`
+    prize.reward_type === "valor"         ? `R$ ${prize.reward_value}`
     : prize.reward_type === "porcentagem" ? `${prize.reward_value}%`
     : prize.reward_type === "frete"       ? "Frete grátis"
     : prize.reward_value
@@ -116,10 +136,21 @@ const statusLabel: Record<string, string> = {
 interface PrizeRow extends Prize { _id: string }
 
 interface Props {
-  initialRanking:      RankingRow[]
-  initialCampaigns:    Campaign[]
+  initialRanking:       RankingRow[]
+  initialCampaigns:     Campaign[]
   connectedInfluencers: ConnectedInfluencer[]
 }
+
+const EMPTY_PRIZE: PrizeRow = {
+  _id: "1", position_start: 1, position_end: 1, reward_type: "valor", reward_value: "", title: "",
+}
+
+// Chave única por cupom: coupon_id quando existe, senão o id do influencer
+// (influencer sem cupom nenhum aparece uma vez; com N cupons aparece N vezes)
+function infKey(inf: ConnectedInfluencer) {
+  return inf.coupon_id ?? inf.id
+}
+
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -132,20 +163,22 @@ export default function RankingClient({
   const [isPending, startTransition] = useTransition()
   const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
 
-  // Sheet state
-  const [name, setName] = useState("")
-  const [desc, setDesc] = useState("")
+  // Sheet form state
+  const [name, setName]           = useState("")
+  const [desc, setDesc]           = useState("")
+  const [status, setStatus]       = useState("active")
   const [startDate, setStartDate] = useState<Date | undefined>()
-  const [endDate, setEndDate] = useState<Date | undefined>()
-  const [prizes, setPrizes] = useState<PrizeRow[]>([
-    { _id: "1", position_start: 1, position_end: 1, reward_type: "valor", reward_value: "", title: "" },
-  ])
+  const [endDate, setEndDate]     = useState<Date | undefined>()
+  const [prizes, setPrizes]       = useState<PrizeRow[]>([{ ...EMPTY_PRIZE }])
   const [selectedInfs, setSelectedInfs] = useState<string[]>([])
-  const [search, setSearch] = useState("")
+  const [search, setSearch]       = useState("")
 
-  const canSave = name.trim().length > 0 && prizes.length > 0 && selectedInfs.length > 0
+  const isEditing = editingCampaign !== null
+  const canSave   = name.trim().length > 0 && prizes.length > 0 && selectedInfs.length > 0
 
+  // Cada cupom é uma entrada independente — chave única = coupon_id ?? inf.id
   const filteredInfs = connectedInfluencers.filter(
     (inf) =>
       inf.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -167,39 +200,120 @@ export default function RankingClient({
     setPrizes((p) => p.map((r) => r._id === id ? { ...r, [field]: value } : r))
   }
 
-  function toggleInf(id: string) {
+  function toggleInf(key: string) {
     setSelectedInfs((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]
     )
   }
 
   function resetSheet() {
     setSheetOpen(false)
+    setEditingCampaign(null)
     setName("")
     setDesc("")
+    setStatus("active")
     setStartDate(undefined)
     setEndDate(undefined)
-    setPrizes([{ _id: "1", position_start: 1, position_end: 1, reward_type: "valor", reward_value: "", title: "" }])
+    setPrizes([{ ...EMPTY_PRIZE }])
     setSelectedInfs([])
     setSearch("")
+  }
+
+  function openEdit(campaign: Campaign) {
+    const parsed = parsePrizes(campaign.prizes)
+    setEditingCampaign(campaign)
+    setName(campaign.name ?? "")
+    setDesc(campaign.description ?? "")
+    setStatus(campaign.status ?? "active")
+    setStartDate(campaign.starts_at ? new Date(campaign.starts_at) : undefined)
+    setEndDate(campaign.ends_at   ? new Date(campaign.ends_at)   : undefined)
+    setPrizes(
+      parsed.length > 0
+        ? parsed.map((p, i) => ({ ...p, _id: String(i + 1) }))
+        : [{ ...EMPTY_PRIZE }]
+    )
+    // Pré-seleciona por coupon_id (UUID direto, mais confiável que coupon_code)
+    const keys: string[] = []
+    for (const r of campaign.ranking ?? []) {
+      const match = r.coupon_id
+        ? connectedInfluencers.find((i) => i.coupon_id === r.coupon_id)
+        : connectedInfluencers.find((i) => i.id === r.influencer_id && !i.coupon_id)
+      if (match) keys.push(infKey(match))
+    }
+    setSelectedInfs(keys)
+    setSearch("")
+    setSheetOpen(true)
+  }
+
+  async function handleDelete(id: string) {
+    await deleteCampaign(id)
+    setCampaigns((prev) => prev.filter((c) => c.id !== id))
   }
 
   function handleSave() {
     if (!canSave) return
     startTransition(async () => {
-      const influencersPayload = selectedInfs.map((id) => {
-        const inf = connectedInfluencers.find((i) => i.id === id)
-        return { influencer_id: id, coupon_id: "" } // coupon_id opcional
-      })
+      const prizesPayload = prizes.map(({ _id, ...rest }) => rest)
 
-      await createCampaign({
-        name,
-        description: desc,
-        starts_at:   startDate ? startDate.toISOString() : null,
-        ends_at:     endDate   ? endDate.toISOString()   : null,
-        prizes:      prizes.map(({ _id, ...rest }) => rest),
-        influencers: influencersPayload,
-      })
+      if (isEditing && editingCampaign) {
+        const influencersPayload = selectedInfs.map((key) => {
+          const inf = connectedInfluencers.find((i) => infKey(i) === key)
+          return { influencer_id: inf?.id ?? "", coupon_id: inf?.coupon_id ?? "" }
+        }).filter((p) => p.influencer_id)
+        const result = await updateCampaign({
+          id:          editingCampaign.id,
+          name,
+          description: desc,
+          starts_at:   startDate ? startDate.toISOString() : null,
+          ends_at:     endDate   ? endDate.toISOString()   : null,
+          prizes:      prizesPayload,
+          status,
+          influencers: influencersPayload,
+        })
+        if (result?.success) {
+          setCampaigns((prev) => prev.map((c) =>
+            c.id === editingCampaign.id
+              ? {
+                  ...c,
+                  name,
+                  description: desc || null,
+                  starts_at:   startDate ? startDate.toISOString() : null,
+                  ends_at:     endDate   ? endDate.toISOString()   : null,
+                  prizes:      JSON.stringify(prizesPayload),
+                  status,
+                }
+              : c
+          ))
+        }
+      } else {
+        const influencersPayload = selectedInfs.map((key) => {
+          const inf = connectedInfluencers.find((i) => infKey(i) === key)
+          return { influencer_id: inf?.id ?? "", coupon_id: inf?.coupon_id ?? "" }
+        }).filter((p) => p.influencer_id)
+        const result = await createCampaign({
+          name,
+          description: desc,
+          starts_at:   startDate ? startDate.toISOString() : null,
+          ends_at:     endDate   ? endDate.toISOString()   : null,
+          prizes:      prizesPayload,
+          influencers: influencersPayload,
+        })
+        if (result?.success) {
+          setCampaigns((prev) => [
+            {
+              id:          result.id,
+              name,
+              description: desc || null,
+              starts_at:   startDate ? startDate.toISOString() : null,
+              ends_at:     endDate   ? endDate.toISOString()   : null,
+              status:      "active",
+              prizes:      JSON.stringify(prizesPayload),
+              ranking:     [],
+            },
+            ...prev,
+          ])
+        }
+      }
 
       resetSheet()
     })
@@ -309,23 +423,28 @@ export default function RankingClient({
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {campaigns.map((campaign) => (
-                <CampaignCard key={campaign.id} campaign={campaign} />
+                <CampaignCard
+                  key={campaign.id}
+                  campaign={campaign}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                />
               ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
 
-      {/* ── Sheet: Criar Campanha ── */}
+      {/* ── Sheet: Criar / Editar Campanha ── */}
       <Sheet open={sheetOpen} onOpenChange={(o) => { if (!o) resetSheet(); else setSheetOpen(true) }}>
-        <SheetContent className="w-[520px] sm:max-w-[520px] flex flex-col">
+        <SheetContent className="sm:max-w-[520px] overflow-hidden">
           <SheetHeader>
-            <SheetTitle>Criar Campanha</SheetTitle>
+            <SheetTitle>{isEditing ? "Editar Campanha" : "Criar Campanha"}</SheetTitle>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-6 py-4 pr-1">
+          <div className="flex-1 overflow-y-auto px-4 space-y-5 pb-2">
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label>Nome</Label>
               <Input
                 placeholder="Ex: Black Friday 2025"
@@ -334,13 +453,30 @@ export default function RankingClient({
               />
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label>Descrição</Label>
               <Textarea rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} />
             </div>
 
+            {/* Status — apenas no modo edição */}
+            {isEditing && (
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Ativa</SelectItem>
+                    <SelectItem value="paused">Pausada</SelectItem>
+                    <SelectItem value="finished">Encerrada</SelectItem>
+                    <SelectItem value="draft">Rascunho</SelectItem>
+                    <SelectItem value="cancelled">Cancelada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Período */}
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label>Período</Label>
               <div className="flex gap-2">
                 <Popover>
@@ -379,57 +515,65 @@ export default function RankingClient({
               <Label>Prêmios</Label>
               <div className="space-y-2">
                 {prizes.map((prize) => (
-                  <div key={prize._id} className="flex items-start gap-2 p-3 rounded-lg border bg-card">
-                    <div className="grid grid-cols-2 gap-1.5 w-[130px] shrink-0">
-                      <div>
-                        <span className="text-[10px] text-muted-foreground">De</span>
+                  <div key={prize._id} className="flex flex-col gap-2 p-3 rounded-lg border bg-card">
+                    <Input
+                      placeholder="Título do prêmio (ex: Campeão de vendas)"
+                      value={prize.title}
+                      onChange={(e) => updatePrize(prize._id, "title", e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                    <div className="flex items-start gap-2">
+                      <div className="grid grid-cols-2 gap-1.5 w-[130px] shrink-0">
+                        <div>
+                          <span className="text-[10px] text-muted-foreground">De</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={prize.position_start}
+                            onChange={(e) => updatePrize(prize._id, "position_start", Number(e.target.value))}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-muted-foreground">Até</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={prize.position_end}
+                            onChange={(e) => updatePrize(prize._id, "position_end", Number(e.target.value))}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-1 space-y-1.5">
+                        <Select
+                          value={prize.reward_type}
+                          onValueChange={(v) => updatePrize(prize._id, "reward_type", v)}
+                        >
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="valor">Valor em R$</SelectItem>
+                            <SelectItem value="porcentagem">Porcentagem</SelectItem>
+                            <SelectItem value="produto">Produto</SelectItem>
+                            <SelectItem value="frete">Frete grátis</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <Input
-                          type="number"
-                          min={1}
-                          value={prize.position_start}
-                          onChange={(e) => updatePrize(prize._id, "position_start", Number(e.target.value))}
+                          placeholder="Valor / Descrição"
+                          value={prize.reward_value}
+                          onChange={(e) => updatePrize(prize._id, "reward_value", e.target.value)}
                           className="h-8 text-xs"
                         />
                       </div>
-                      <div>
-                        <span className="text-[10px] text-muted-foreground">Até</span>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={prize.position_end}
-                          onChange={(e) => updatePrize(prize._id, "position_end", Number(e.target.value))}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex-1 space-y-1.5">
-                      <Select
-                        value={prize.reward_type}
-                        onValueChange={(v) => updatePrize(prize._id, "reward_type", v)}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0 mt-4"
+                        onClick={() => removePrize(prize._id)}
                       >
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="valor">Valor em R$</SelectItem>
-                          <SelectItem value="porcentagem">Porcentagem</SelectItem>
-                          <SelectItem value="produto">Produto</SelectItem>
-                          <SelectItem value="frete">Frete grátis</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        placeholder="Valor / Descrição"
-                        value={prize.reward_value}
-                        onChange={(e) => updatePrize(prize._id, "reward_value", e.target.value)}
-                        className="h-8 text-xs"
-                      />
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0 mt-4"
-                      onClick={() => removePrize(prize._id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
                   </div>
                 ))}
               </div>
@@ -454,44 +598,42 @@ export default function RankingClient({
                     />
                   </div>
                 </div>
-                <ScrollArea className="max-h-[220px]">
+                <div className="max-h-[200px] overflow-y-auto">
                   <div className="p-1">
                     {filteredInfs.length === 0 ? (
                       <p className="text-xs text-muted-foreground text-center py-4">Nenhum influencer encontrado</p>
                     ) : filteredInfs.map((inf) => {
-                      const selected = selectedInfs.includes(inf.id)
+                      const key      = infKey(inf)
+                      const selected = selectedInfs.includes(key)
                       return (
                         <div
-                          key={inf.id}
-                          onClick={() => toggleInf(inf.id)}
+                          key={key}
+                          onClick={() => toggleInf(key)}
                           className={cn(
                             "flex items-center gap-3 w-full rounded-md px-3 py-2 text-left transition-colors cursor-pointer",
                             selected ? "bg-primary/5" : "hover:bg-muted/50"
                           )}
                         >
                           <Checkbox checked={selected} />
-                          
                           {inf.coupon && (
-                            <Badge variant="secondary" className="font-mono text-xs">
+                            <Badge variant="secondary" className="font-mono text-xs shrink-0">
                               {inf.coupon}
                             </Badge>
                           )}
-
-                          <Avatar className="h-6 w-6">
+                          <Avatar className="h-6 w-6 shrink-0">
                             {inf.avatar_url && <AvatarImage src={`${process.env.NEXT_PUBLIC_BUCKET_URL}${inf.avatar_url}`} />}
                             <AvatarFallback className="text-[9px] font-medium">
                               {initials(inf.name)}
                             </AvatarFallback>
                           </Avatar>
-
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground truncate">
                             {inf.name ?? "—"}
                           </span>
                         </div>
                       )
                     })}
                   </div>
-                </ScrollArea>
+                </div>
               </div>
               {selectedInfs.length > 0 && (
                 <p className="text-xs text-muted-foreground">
@@ -501,13 +643,13 @@ export default function RankingClient({
             </div>
           </div>
 
-          <SheetFooter className="border-t pt-4 gap-2">
+          <SheetFooter className="border-t flex-row justify-end">
             <Button variant="outline" onClick={resetSheet} disabled={isPending}>
               Cancelar
             </Button>
             <Button disabled={!canSave || isPending} onClick={handleSave}>
               {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Salvar Campanha
+              {isEditing ? "Salvar alterações" : "Criar campanha"}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -518,9 +660,26 @@ export default function RankingClient({
 
 // ── Campaign Card ─────────────────────────────────────────────────────────────
 
-function CampaignCard({ campaign }: { campaign: Campaign }) {
-  const prizes = parsePrizes(campaign.prizes)
-  const status = campaign.status ?? "draft"
+function CampaignCard({
+  campaign,
+  onEdit,
+  onDelete,
+}: {
+  campaign: Campaign
+  onEdit:   (c: Campaign) => void
+  onDelete: (id: string) => Promise<void>
+}) {
+  const prizes        = parsePrizes(campaign.prizes)
+  const status        = campaign.status ?? "draft"
+  const [deleteOpen, setDeleteOpen]   = useState(false)
+  const [isDeleting, setIsDeleting]   = useState(false)
+
+  async function confirmDelete() {
+    setIsDeleting(true)
+    await onDelete(campaign.id)
+    setIsDeleting(false)
+    setDeleteOpen(false)
+  }
 
   return (
     <Card className="p-5 space-y-4">
@@ -594,10 +753,60 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
             </p>
           )}
         </div>
-        <Badge variant="secondary" className={cn("text-xs", statusStyle[status])}>
-          {statusLabel[status] ?? status}
-        </Badge>
+
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className={cn("text-xs", statusStyle[status])}>
+            {statusLabel[status] ?? status}
+          </Badge>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit(campaign)}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
+
+      {/* Confirmação de exclusão */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir campanha?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A campanha <strong>{campaign.name}</strong> e todos os seus participantes serão removidos. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {isDeleting
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : "Excluir"
+              }
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }

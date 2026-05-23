@@ -19,7 +19,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useState, useTransition } from "react"
 import { nuvemShopLink, disconnectStore, type StoreInfo } from "./actions"
-import { Loader2, Unplug } from "lucide-react"
+import { Loader2, Settings, Unplug } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { set } from "date-fns"
+import { DialogDemo } from "./txdialog"
 
 interface Props {
   stores: StoreInfo[]
@@ -59,9 +62,33 @@ export default function ClientPage({ stores: initialStores }: Props) {
           Integrações
         </span>
       </div>
-
       <div className="grid grid-cols-3 gap-4 items-stretch">
+        
+        {/* Taxas Config */}
+        <Card className="h-full">
+            <Field className="flex flex-col h-full">
+              <CardContent className="flex flex-col gap-2 flex-1">
+                <div className="flex flex-row gap-3 items-center">
+                  <Settings size={32}/>
+                  <div className="flex flex-col gap-0.5">
+                    <CardTitle>Taxas</CardTitle>
+                  </div>
+                </div>
+                <CardDescription>
+                  Configure as Taxas dos seus pedidos!
+                </CardDescription>
+              </CardContent>
 
+              <CardFooter>
+                <DialogDemo/>
+              </CardFooter>
+            </Field>
+        </Card>
+        
+      </div>
+
+      <Separator orientation="horizontal"/>
+      <div className="grid grid-cols-3 gap-4 items-stretch">
         {/* NuvemShop */}
         <Card className="h-full">
           <form action={nuvemShopLink} className="flex flex-col h-full">
