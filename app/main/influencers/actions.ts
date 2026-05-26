@@ -86,10 +86,10 @@ export default async function getInfluencersData(
   month?: string,
   dateFrom?: string,
   dateTo?: string,
-) {
+): Promise<{ influencers: any[]; topInfluencers: any[] }> {
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return []
+  if (!session) return { influencers: [], topInfluencers: [] }
 
   const uid         = session.user.id
   const accessToken = session.access_token

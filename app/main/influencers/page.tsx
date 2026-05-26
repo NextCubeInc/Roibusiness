@@ -9,8 +9,8 @@ export default async function Page() {
 
   return (
     <ClientPage
-      influencers={data?.influencers ?? []}
-      topInfluencers={data?.topInfluencers ?? []}
+      influencers={data.influencers ?? []}
+      topInfluencers={data.topInfluencers ?? []}
       pendingInvites={pendingInvites ?? []}
     />
   )
