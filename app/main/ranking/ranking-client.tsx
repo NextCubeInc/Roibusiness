@@ -712,7 +712,7 @@ function CampaignCard({
           </TableHeader>
           <TableBody>
             {campaign.ranking.map((r, i) => (
-              <TableRow key={r.influencer_id}>
+              <TableRow key={r.coupon_id ?? `${r.influencer_id}-${i}`}>
                 <TableCell><PositionBadge pos={i + 1} /></TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
