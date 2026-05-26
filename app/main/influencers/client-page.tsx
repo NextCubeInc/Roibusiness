@@ -197,7 +197,7 @@ export default function ClientPage({
     setSelectedYear(year)
     startTransition(async () => {
       const data = await getInfluencersData(combined)
-      setInfluencers(data)
+      setInfluencers(Array.isArray(data) ? data : (data.influencers ?? []))
     })
   }
 
@@ -207,7 +207,7 @@ export default function ClientPage({
       // Volta pro mês/ano selecionado
       startTransition(async () => {
         const data = await getInfluencersData(`${selectedYear}-${selectedMonthNum}`)
-        setInfluencers(data)
+        setInfluencers(Array.isArray(data) ? data : (data.influencers ?? []))
       })
     }
   }
@@ -218,7 +218,7 @@ export default function ClientPage({
     const to   = format(dateTo,   "yyyy-MM-dd")
     startTransition(async () => {
       const data = await getInfluencersData(undefined, from, to)
-      setInfluencers(data)
+      setInfluencers(Array.isArray(data) ? data : (data.influencers ?? []))
     })
   }
 
@@ -280,7 +280,7 @@ export default function ClientPage({
       setNewCouponFrom(undefined)
       setNewCouponTo(undefined)
       const data = await getInfluencersData(`${selectedYear}-${selectedMonthNum}`)
-      setInfluencers(data)
+      setInfluencers(Array.isArray(data) ? data : (data.influencers ?? []))
     } else if (result.error?.includes("duplicate_coupon")) {
       setDuplicateCouponError(true)
     }
@@ -301,7 +301,7 @@ export default function ClientPage({
       setNewPeriodFrom(undefined)
       setNewPeriodTo(undefined)
       const data = await getInfluencersData(`${selectedYear}-${selectedMonthNum}`)
-      setInfluencers(data)
+      setInfluencers(Array.isArray(data) ? data : (data.influencers ?? []))
     }
     setLoadingPeriod(false)
   }
