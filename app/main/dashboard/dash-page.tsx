@@ -20,7 +20,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts"
-import { Plus } from "lucide-react"
+import { BadgeQuestionMark, Plus } from "lucide-react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -154,7 +154,7 @@ export default function DashboardClient({
       <div className="flex flex-row justify-between items-center">
         <div className="flex flex-row gap-2 items-center">
           {!open && <SidebarTrigger size="lg" />}
-          <span className="text-sm font-medium tracking-widest text-muted-foreground uppercase">
+          <span className="flex text-sm font-medium tracking-widest text-muted-foreground uppercase items-center gap-2">
             Dashboard
           </span>
         </div>

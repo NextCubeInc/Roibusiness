@@ -44,29 +44,34 @@ export async function getInfluencerByCode(code: string) {
 }
 
 export async function setBusinessInfluencer(invite_code: string) {
-  const supabase = await createClient()
+  try {
+    const supabase = await createClient()
 
-  const formatted = invite_code.includes("-")
-    ? invite_code
-    : `${invite_code.slice(0, 4)}-${invite_code.slice(4)}`
+    const formatted = invite_code.includes("-")
+      ? invite_code
+      : `${invite_code.slice(0, 4)}-${invite_code.slice(4)}`
 
-  const { data: found } = await supabase
-    .rpc('get_influencer_by_invite_code', { p_invite_code: formatted })
+    const { data: found } = await supabase
+      .rpc('get_influencer_by_invite_code', { p_invite_code: formatted })
 
-  if (!found?.[0]) return { success: false, error: "not_found" as const }
+    if (!found?.[0]) return { success: false, error: "not_found" as const }
 
-  const { error } = await supabase
-    .rpc('create_business_invite', { p_influencer_id: found[0].id })
+    const { error } = await supabase
+      .rpc('create_business_invite', { p_influencer_id: found[0].id })
 
-  if (error) {
-    const isDuplicate = error.message.includes("duplicate_invite")
-    return { success: false, error: isDuplicate ? "duplicate_invite" as const : "unknown" as const }
+    if (error) {
+      const isDuplicate = error.message.includes("duplicate_invite")
+      return { success: false, error: isDuplicate ? "duplicate_invite" as const : "unknown" as const }
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) revalidateTag(`${user.id}-influencers`, {})
+
+    return { success: true, error: null }
+  } catch (e) {
+    console.error("setBusinessInfluencer error:", e)
+    return { success: false, error: "unknown" as const }
   }
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (user) revalidateTag(`${user.id}-influencers`, {})
-
-  return { success: true, error: null }
 }
 
 export async function cancelInvite(influencer_id: string) {

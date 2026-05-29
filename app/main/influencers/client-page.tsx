@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { LayoutDashboard, Pen, Plus, Trash2, Loader2, Clock, X, CalendarIcon } from "lucide-react"
+import { LayoutDashboard, Pen, Plus, Trash2, Loader2, Clock, X, CalendarIcon, BadgeQuestionMark } from "lucide-react"
 import { useState, useTransition } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -134,6 +134,7 @@ export default function ClientPage({
   } | null>(null)
   const [inviteError, setInviteError]       = useState<InviteError>(null)
   const [inviteLoading, setInviteLoading]   = useState(false)
+  const [searchLoading, setSearchLoading]   = useState(false)
 
   // Sheet editar coupons
   const [editId, setEditId]               = useState<string | null>(null)
@@ -177,6 +178,7 @@ export default function ClientPage({
     setFoundInfluencer(null)
     setInviteError(null)
     setInviteLoading(false)
+    setSearchLoading(false)
   }
 
   function localUpdateCoupons(influencer_id: string, updater: (coupons: Coupon[]) => Coupon[]) {
@@ -222,16 +224,22 @@ export default function ClientPage({
     })
   }
 
-  async function handleCodeChange(value: string) {
-    setCode(value)
+  function handleCodeChange(value: string) {
+    const clean = value.replace(/[-\s]/g, "")
+    setCode(clean)
     setInviteError(null)
-    if (value.length === 8) {
-      const formatted = `${value.slice(0, 4)}-${value.slice(4)}`
-      const result = await getInfluencerByCode(formatted)
-      setFoundInfluencer(result)
-    } else {
-      setFoundInfluencer(null)
-    }
+    setFoundInfluencer(null)
+  }
+
+  async function handleSearch() {
+    if (code.length !== 8) return
+    setSearchLoading(true)
+    setInviteError(null)
+    const formatted = `${code.slice(0, 4)}-${code.slice(4)}`
+    const result = await getInfluencerByCode(formatted)
+    if (!result) setInviteError("not_found")
+    setFoundInfluencer(result)
+    setSearchLoading(false)
   }
 
   async function handleAddInfluencer() {
@@ -239,18 +247,24 @@ export default function ClientPage({
     setInviteLoading(true)
     setInviteError(null)
 
-    const result = await setBusinessInfluencer(code)
+    try {
+      const result = await setBusinessInfluencer(code)
 
-    if (result.success) {
-      setDialogOpen(false)
-      resetDialog()
-      // Recarrega pendentes
-      const fresh = await getPendingInvites()
-      setPending(fresh)
-      // Abre a sheet de pendentes pra mostrar o novo convite
-      setInvitesSheetOpen(true)
-    } else {
-      setInviteError((result.error as InviteError) ?? "unknown")
+      if (result.success) {
+        setDialogOpen(false)
+        resetDialog()
+        try {
+          const fresh = await getPendingInvites()
+          setPending(fresh)
+        } catch {
+          // ignora erro ao recarregar pendentes — o convite já foi criado
+        }
+        setInvitesSheetOpen(true)
+      } else {
+        setInviteError((result.error as InviteError) ?? "unknown")
+      }
+    } catch {
+      setInviteError("unknown")
     }
 
     setInviteLoading(false)
@@ -750,8 +764,9 @@ export default function ClientPage({
         <div className="flex flex-row justify-between items-center">
           <div className="flex flex-row gap-2 items-center">
             {!open && <SidebarTrigger size="lg" />}
-            <label className="text-sm font-medium tracking-widest text-muted-foreground uppercase">
+            <label className=" flex text-sm font-medium tracking-widest text-muted-foreground uppercase items-center gap-2">
               Influencers
+              <BadgeQuestionMark size={16}/>
             </label>
           </div>
 
@@ -791,15 +806,34 @@ export default function ClientPage({
                   </DialogDescription>
                 </DialogHeader>
 
-                <InputOTP maxLength={8} value={code} onChange={handleCodeChange}>
-                  <InputOTPGroup>
-                    {[0,1,2,3].map(i => <InputOTPSlot key={i} index={i} className="h-10 w-10 text-lg" />)}
-                  </InputOTPGroup>
-                  <InputOTPSeparator />
-                  <InputOTPGroup>
-                    {[4,5,6,7].map(i => <InputOTPSlot key={i} index={i} className="h-10 w-10 text-lg" />)}
-                  </InputOTPGroup>
-                </InputOTP>
+                <div onPaste={(e) => {
+                  e.preventDefault()
+                  const clean = e.clipboardData.getData("text").replace(/[-\s]/g, "").slice(0, 8)
+                  handleCodeChange(clean)
+                }}>
+                  <InputOTP maxLength={8} value={code} onChange={handleCodeChange}>
+                    <InputOTPGroup>
+                      {[0,1,2,3].map(i => <InputOTPSlot key={i} index={i} className="h-10 w-10 text-lg" />)}
+                    </InputOTPGroup>
+                    <InputOTPSeparator />
+                    <InputOTPGroup>
+                      {[4,5,6,7].map(i => <InputOTPSlot key={i} index={i} className="h-10 w-10 text-lg" />)}
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={handleSearch}
+                  disabled={code.length !== 8 || searchLoading}
+                >
+                  {searchLoading
+                    ? <Loader2 size={16} className="animate-spin mr-2" />
+                    : null
+                  }
+                  Pesquisar
+                </Button>
 
                 {inviteError === "duplicate_invite" && (
                   <div className="w-full rounded-md bg-yellow-500/10 border border-yellow-500/30 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-400">
