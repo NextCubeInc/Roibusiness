@@ -142,8 +142,9 @@ export default function ClientPage({
   const [newCommission, setNewCommission] = useState<number>(0)
   const [newCouponFrom, setNewCouponFrom] = useState<Date | undefined>(undefined)
   const [newCouponTo, setNewCouponTo]     = useState<Date | undefined>(undefined)
-  const [loadingCoupon, setLoadingCoupon]       = useState(false)
+  const [loadingCoupon, setLoadingCoupon]             = useState(false)
   const [duplicateCouponError, setDuplicateCouponError] = useState(false)
+  const [notLinkedError, setNotLinkedError]             = useState(false)
 
   // Adicionar período de comissão a cupom existente
   const [addingPeriodFor, setAddingPeriodFor]     = useState<string | null>(null)
@@ -272,8 +273,12 @@ export default function ClientPage({
 
   async function handleCancelInvite(influencer_id: string) {
     setCancellingId(influencer_id)
-    await cancelInvite(influencer_id)
-    setPending(prev => prev.filter(i => i.influencer_id !== influencer_id))
+    try {
+      await cancelInvite(influencer_id)
+      setPending(prev => prev.filter(i => i.influencer_id !== influencer_id))
+    } catch (e) {
+      console.error("cancelInvite error:", e)
+    }
     setCancellingId(null)
   }
 
@@ -281,41 +286,52 @@ export default function ClientPage({
     if (!editId || !newCouponCode.trim()) return
     setLoadingCoupon(true)
     setDuplicateCouponError(false)
-    const result = await addCoupon(
-      editId,
-      newCouponCode.trim().toUpperCase(),
-      newCommission ?? 0,
-      newCouponFrom ? newCouponFrom.toISOString() : undefined,
-      newCouponTo   ? newCouponTo.toISOString()   : undefined,
-    )
-    if (result.success) {
-      setNewCouponCode("")
-      setNewCommission(0)
-      setNewCouponFrom(undefined)
-      setNewCouponTo(undefined)
-      const data = await getInfluencersData(`${selectedYear}-${selectedMonthNum}`)
-      setInfluencers(data.influencers ?? [])
-    } else if (result.error?.includes("duplicate_coupon")) {
-      setDuplicateCouponError(true)
+    setNotLinkedError(false)
+    try {
+      const result = await addCoupon(
+        editId,
+        newCouponCode.trim().toUpperCase(),
+        newCommission ?? 0,
+        newCouponFrom ? newCouponFrom.toISOString() : undefined,
+        newCouponTo   ? newCouponTo.toISOString()   : undefined,
+      )
+      if (result.success) {
+        setNewCouponCode("")
+        setNewCommission(0)
+        setNewCouponFrom(undefined)
+        setNewCouponTo(undefined)
+        const data = await getInfluencersData(`${selectedYear}-${selectedMonthNum}`)
+        setInfluencers(data.influencers ?? [])
+      } else if (result.error?.includes("duplicate_coupon")) {
+        setDuplicateCouponError(true)
+      } else if (result.error?.includes("influencer_not_linked")) {
+        setNotLinkedError(true)
+      }
+    } catch (e) {
+      console.error("handleAddCoupon error:", e)
     }
     setLoadingCoupon(false)
   }
 
   async function handleAddPeriod(couponId: string) {
     setLoadingPeriod(true)
-    const result = await addCouponCommission(
-      couponId,
-      newPeriodPercent,
-      newPeriodFrom ? newPeriodFrom.toISOString() : undefined,
-      newPeriodTo   ? newPeriodTo.toISOString()   : undefined,
-    )
-    if (result.success) {
-      setAddingPeriodFor(null)
-      setNewPeriodPercent(0)
-      setNewPeriodFrom(undefined)
-      setNewPeriodTo(undefined)
-      const data = await getInfluencersData(`${selectedYear}-${selectedMonthNum}`)
-      setInfluencers(data.influencers ?? [])
+    try {
+      const result = await addCouponCommission(
+        couponId,
+        newPeriodPercent,
+        newPeriodFrom ? newPeriodFrom.toISOString() : undefined,
+        newPeriodTo   ? newPeriodTo.toISOString()   : undefined,
+      )
+      if (result.success) {
+        setAddingPeriodFor(null)
+        setNewPeriodPercent(0)
+        setNewPeriodFrom(undefined)
+        setNewPeriodTo(undefined)
+        const data = await getInfluencersData(`${selectedYear}-${selectedMonthNum}`)
+        setInfluencers(data.influencers ?? [])
+      }
+    } catch (e) {
+      console.error("handleAddPeriod error:", e)
     }
     setLoadingPeriod(false)
   }
@@ -323,72 +339,92 @@ export default function ClientPage({
   async function handleSavePeriod() {
     if (!editingPeriod) return
     setSavingPeriod(true)
-    const result = await updateCouponCommission(
-      editingPeriod.id,
-      editingPeriod.percent,
-      editingPeriod.from ? editingPeriod.from.toISOString() : undefined,
-      editingPeriod.to   ? editingPeriod.to.toISOString()   : undefined,
-    )
-    if (result.success) {
-      setInfluencers(prev =>
-        prev.map(inf => ({
-          ...inf,
-          coupons: (inf.coupons ?? []).map(c =>
-            c.id === editingPeriod.couponId
-              ? {
-                  ...c,
-                  commissions: (c.commissions ?? []).map(p =>
-                    p.id === editingPeriod.id
-                      ? {
-                          ...p,
-                          percent:    editingPeriod.percent,
-                          valid_from: editingPeriod.from?.toISOString() ?? null,
-                          valid_to:   editingPeriod.to?.toISOString()   ?? null,
-                        }
-                      : p
-                  ),
-                }
-              : c
-          ),
-        }))
+    try {
+      const result = await updateCouponCommission(
+        editingPeriod.id,
+        editingPeriod.percent,
+        editingPeriod.from ? editingPeriod.from.toISOString() : undefined,
+        editingPeriod.to   ? editingPeriod.to.toISOString()   : undefined,
       )
-      setEditingPeriod(null)
+      if (result.success) {
+        setInfluencers(prev =>
+          prev.map(inf => ({
+            ...inf,
+            coupons: (inf.coupons ?? []).map(c =>
+              c.id === editingPeriod.couponId
+                ? {
+                    ...c,
+                    commissions: (c.commissions ?? []).map(p =>
+                      p.id === editingPeriod.id
+                        ? {
+                            ...p,
+                            percent:    editingPeriod.percent,
+                            valid_from: editingPeriod.from?.toISOString() ?? null,
+                            valid_to:   editingPeriod.to?.toISOString()   ?? null,
+                          }
+                        : p
+                    ),
+                  }
+                : c
+            ),
+          }))
+        )
+        setEditingPeriod(null)
+      }
+    } catch (e) {
+      console.error("handleSavePeriod error:", e)
     }
     setSavingPeriod(false)
   }
 
   async function handleDeletePeriod(couponId: string, commissionId: string) {
-    await deleteCouponCommission(commissionId)
-    setInfluencers(prev =>
-      prev.map(inf => ({
-        ...inf,
-        coupons: (inf.coupons ?? []).map(c =>
-          c.id === couponId
-            ? { ...c, commissions: (c.commissions ?? []).filter(p => p.id !== commissionId) }
-            : c
-        ),
-      }))
-    )
+    try {
+      await deleteCouponCommission(commissionId)
+      setInfluencers(prev =>
+        prev.map(inf => ({
+          ...inf,
+          coupons: (inf.coupons ?? []).map(c =>
+            c.id === couponId
+              ? { ...c, commissions: (c.commissions ?? []).filter(p => p.id !== commissionId) }
+              : c
+          ),
+        }))
+      )
+    } catch (e) {
+      console.error("handleDeletePeriod error:", e)
+    }
   }
 
   async function handleToggleCoupon(coupon: Coupon) {
     if (!editId) return
-    await toggleCoupon(coupon.id, !coupon.is_active)
-    localUpdateCoupons(editId, prev =>
-      prev.map(c => c.id === coupon.id ? { ...c, is_active: !c.is_active } : c)
-    )
+    try {
+      await toggleCoupon(coupon.id, !coupon.is_active)
+      localUpdateCoupons(editId, prev =>
+        prev.map(c => c.id === coupon.id ? { ...c, is_active: !c.is_active } : c)
+      )
+    } catch (e) {
+      console.error("handleToggleCoupon error:", e)
+    }
   }
 
   async function handleDeleteCoupon(coupon_id: string) {
     if (!editId) return
-    await deleteCoupon(coupon_id)
-    localUpdateCoupons(editId, prev => prev.filter(c => c.id !== coupon_id))
+    try {
+      await deleteCoupon(coupon_id)
+      localUpdateCoupons(editId, prev => prev.filter(c => c.id !== coupon_id))
+    } catch (e) {
+      console.error("handleDeleteCoupon error:", e)
+    }
   }
 
   async function handleRemoveInfluencer(influencer_id: string) {
     setRemovingInfluencer(influencer_id)
-    await removeBusinessInfluencer(influencer_id)
-    setInfluencers(prev => prev.filter(i => i.influencer_id !== influencer_id))
+    try {
+      await removeBusinessInfluencer(influencer_id)
+      setInfluencers(prev => prev.filter(i => i.influencer_id !== influencer_id))
+    } catch (e) {
+      console.error("handleRemoveInfluencer error:", e)
+    }
     setRemovingInfluencer(null)
   }
 
@@ -463,6 +499,9 @@ export default function ClientPage({
             <SheetTitle>
               {editingInfluencer ? `Cupons de ${text(editingInfluencer.name)}` : "Cupons"}
             </SheetTitle>
+            <SheetDescription>
+              Gerencie os cupons e comissões deste influencer.
+            </SheetDescription>
           </SheetHeader>
 
           {editingInfluencer && (
@@ -740,6 +779,11 @@ export default function ClientPage({
                 {duplicateCouponError && (
                   <p className="text-xs text-destructive">
                     Este código já está cadastrado nesta conta.
+                  </p>
+                )}
+                {notLinkedError && (
+                  <p className="text-xs text-destructive">
+                    Este influencer ainda não aceitou o convite. Aguarde a confirmação antes de adicionar cupons.
                   </p>
                 )}
 

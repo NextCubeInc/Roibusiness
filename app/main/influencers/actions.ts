@@ -137,15 +137,20 @@ export async function addCoupon(
   validFrom?:    string,
   validTo?:      string,
 ) {
-  const supabase = await createClient()
-  const { data, error } = await supabase.rpc('add_coupon', {
-    p_influencer_id:      influencer_id,
-    p_code:               code,
-    p_commission_percent: valueC,
-    ...(validFrom ? { p_valid_from: validFrom } : {}),
-    ...(validTo   ? { p_valid_to:   validTo   } : {}),
-  })
-  return { success: !error, id: data as string | null, error: error?.message }
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase.rpc('add_coupon', {
+      p_influencer_id:      influencer_id,
+      p_code:               code,
+      p_commission_percent: valueC,
+      ...(validFrom ? { p_valid_from: validFrom } : {}),
+      ...(validTo   ? { p_valid_to:   validTo   } : {}),
+    })
+    return { success: !error, id: data as string | null, error: error?.message }
+  } catch (e) {
+    console.error("addCoupon error:", e)
+    return { success: false, id: null, error: "unknown" }
+  }
 }
 
 export async function addCouponCommission(
@@ -154,14 +159,19 @@ export async function addCouponCommission(
   validFrom?: string,
   validTo?:   string,
 ) {
-  const supabase = await createClient()
-  const { data, error } = await supabase.rpc('add_coupon_commission', {
-    p_coupon_id:          coupon_id,
-    p_commission_percent: percent,
-    ...(validFrom ? { p_valid_from: validFrom } : {}),
-    ...(validTo   ? { p_valid_to:   validTo   } : {}),
-  })
-  return { success: !error, id: data as string | null, error: error?.message }
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase.rpc('add_coupon_commission', {
+      p_coupon_id:          coupon_id,
+      p_commission_percent: percent,
+      ...(validFrom ? { p_valid_from: validFrom } : {}),
+      ...(validTo   ? { p_valid_to:   validTo   } : {}),
+    })
+    return { success: !error, id: data as string | null, error: error?.message }
+  } catch (e) {
+    console.error("addCouponCommission error:", e)
+    return { success: false, id: null, error: "unknown" }
+  }
 }
 
 export async function updateCouponCommission(
@@ -170,40 +180,65 @@ export async function updateCouponCommission(
   validFrom?:    string,
   validTo?:      string,
 ) {
-  const supabase = await createClient()
-  const { error } = await supabase.rpc('update_coupon_commission', {
-    p_commission_id:      commission_id,
-    p_commission_percent: percent,
-    p_valid_from:         validFrom ?? null,
-    p_valid_to:           validTo   ?? null,
-  })
-  return { success: !error, error: error?.message }
+  try {
+    const supabase = await createClient()
+    const { error } = await supabase.rpc('update_coupon_commission', {
+      p_commission_id:      commission_id,
+      p_commission_percent: percent,
+      p_valid_from:         validFrom ?? null,
+      p_valid_to:           validTo   ?? null,
+    })
+    return { success: !error, error: error?.message }
+  } catch (e) {
+    console.error("updateCouponCommission error:", e)
+    return { success: false, error: "unknown" }
+  }
 }
 
 export async function deleteCouponCommission(commission_id: string) {
-  const supabase = await createClient()
-  const { error } = await supabase
-    .rpc('delete_coupon_commission', { p_commission_id: commission_id })
-  return { success: !error }
+  try {
+    const supabase = await createClient()
+    const { error } = await supabase
+      .rpc('delete_coupon_commission', { p_commission_id: commission_id })
+    return { success: !error }
+  } catch (e) {
+    console.error("deleteCouponCommission error:", e)
+    return { success: false }
+  }
 }
 
 export async function toggleCoupon(coupon_id: string, is_active: boolean) {
-  const supabase = await createClient()
-  const { error } = await supabase
-    .rpc('toggle_coupon', { p_coupon_id: coupon_id, p_is_active: is_active })
-  return { success: !error }
+  try {
+    const supabase = await createClient()
+    const { error } = await supabase
+      .rpc('toggle_coupon', { p_coupon_id: coupon_id, p_is_active: is_active })
+    return { success: !error }
+  } catch (e) {
+    console.error("toggleCoupon error:", e)
+    return { success: false }
+  }
 }
 
 export async function deleteCoupon(coupon_id: string) {
-  const supabase = await createClient()
-  const { error } = await supabase
-    .rpc('delete_coupon', { p_coupon_id: coupon_id })
-  return { success: !error }
+  try {
+    const supabase = await createClient()
+    const { error } = await supabase
+      .rpc('delete_coupon', { p_coupon_id: coupon_id })
+    return { success: !error }
+  } catch (e) {
+    console.error("deleteCoupon error:", e)
+    return { success: false }
+  }
 }
 
 export async function removeBusinessInfluencer(influencer_id: string) {
-  const supabase = await createClient()
-  const { error } = await supabase
-    .rpc('remove_business_influencer', { p_influencer_id: influencer_id })
-  return { success: !error }
+  try {
+    const supabase = await createClient()
+    const { error } = await supabase
+      .rpc('remove_business_influencer', { p_influencer_id: influencer_id })
+    return { success: !error }
+  } catch (e) {
+    console.error("removeBusinessInfluencer error:", e)
+    return { success: false }
+  }
 }

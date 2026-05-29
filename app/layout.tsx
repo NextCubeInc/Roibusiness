@@ -23,10 +23,13 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="pt-BR"
       suppressHydrationWarning
       className={cn("antialiased", fontMono.variable, robotoSlab.variable, robotoHeading.variable, "font-sans", ibmPlexSans.variable)}
     >
+      <head>
+        <meta name="google" content="notranslate" />
+      </head>
       <body>
         <Analytics/>
         <ThemeProvider>{children}</ThemeProvider>
