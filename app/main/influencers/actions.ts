@@ -146,6 +146,10 @@ export async function addCoupon(
       ...(validFrom ? { p_valid_from: validFrom } : {}),
       ...(validTo   ? { p_valid_to:   validTo   } : {}),
     })
+    if (!error) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) revalidateTag(`${user.id}-influencers`, {})
+    }
     return { success: !error, id: data as string | null, error: error?.message }
   } catch (e) {
     console.error("addCoupon error:", e)
@@ -167,6 +171,10 @@ export async function addCouponCommission(
       ...(validFrom ? { p_valid_from: validFrom } : {}),
       ...(validTo   ? { p_valid_to:   validTo   } : {}),
     })
+    if (!error) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) revalidateTag(`${user.id}-influencers`, {})
+    }
     return { success: !error, id: data as string | null, error: error?.message }
   } catch (e) {
     console.error("addCouponCommission error:", e)
