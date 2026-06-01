@@ -1,48 +1,39 @@
 "use server"
 
-import { unstable_cache } from 'next/cache'
 import { createClient } from "@/lib/supabase/server"
-import { createCachedClient } from "@/lib/supabase/cached-client"
 
 export async function getDashboardData(
   p_days: 7 | 15 | 30 = 7,
   p_months: 3 | 6 | 12 = 6,
   p_limit: number = 10
 ) {
-  // cookies() deve ser chamado FORA do unstable_cache
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return null
 
-  const uid         = session.user.id
-  const accessToken = session.access_token
+  const [
+    { data: kpis,           error: e1 },
+    { data: dailyChart,     error: e2 },
+    { data: monthlyChart,   error: e3 },
+    { data: lastOrders,     error: e4 },
+    { data: topInfluencers, error: e5 },
+  ] = await Promise.all([
+    supabase.rpc('get_business_kpis_v_r1_0_1'),
+    supabase.rpc('get_business_sales_by_day_v_r1_0_1', { p_days }),
+    supabase.rpc('get_business_sales_by_month_v_r1_0_1', { p_months }),
+    supabase.rpc('get_business_last_orders_v_r1_0_1', { p_limit }),
+    supabase.rpc('get_business_top_influencers_v_r1_0_1', { p_limit: 5 }),
+  ])
 
-  // Token capturado em closure — NÃO passa como argumento para não entrar na cache key
-  // Se passado como argumento, cada rotação de JWT = cache miss = vai ao banco de novo
-  return unstable_cache(
-    async () => {
-      const client = createCachedClient(accessToken)
+  const errors = { kpis: e1, dailyChart: e2, monthlyChart: e3, lastOrders: e4, topInfluencers: e5 }
+  const hasError = Object.values(errors).some(Boolean)
+  if (hasError) console.error('[dashboard] RPC errors:', JSON.stringify(errors, null, 2))
 
-      const [
-        { data: kpis },
-        { data: dailyChart },
-        { data: monthlyChart },
-        { data: lastOrders },
-        { data: topInfluencers },
-      ] = await Promise.all([
-        client.rpc('get_business_kpis'),
-        client.rpc('get_business_sales_by_day', { p_days }),
-        client.rpc('get_business_sales_by_month', { p_months }),
-        client.rpc('get_business_last_orders', { p_limit }),
-        client.rpc('get_business_top_influencers', { p_limit: 5 }),
-      ])
-
-      return { kpis, dailyChart, monthlyChart, lastOrders, topInfluencers }
-    },
-    [`dashboard-${uid}-d${p_days}-m${p_months}`],
-    {
-      tags: [`${uid}-orders`, `${uid}-dashboard`],
-      revalidate: 300,
-    }
-  )()
+  return {
+    kpis,
+    dailyChart:     dailyChart     ?? [],
+    monthlyChart:   monthlyChart   ?? [],
+    lastOrders:     lastOrders     ?? [],
+    topInfluencers: topInfluencers ?? [],
+  }
 }

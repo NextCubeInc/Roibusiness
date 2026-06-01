@@ -48,7 +48,7 @@ export async function getBusinessOrders(
     dateTo,
   } = filters
 
-  const { data, error } = await supabase.rpc("get_business_orders", {
+  const { data, error } = await supabase.rpc("get_business_orders_v_r1_0_1", {
     p_limit:     pageSize,
     p_offset:    (page - 1) * pageSize,
     p_search_id: searchId  || null,

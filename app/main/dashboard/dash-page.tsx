@@ -34,7 +34,7 @@ type KPIs = {
   avg_ticket: number
   total_commission: number
   roi: number
-  connected_influencers: number
+  active_influencers: number
 }
 
 type DailySale = {
@@ -185,7 +185,7 @@ export default function DashboardClient({
           },
           {
             label: "Influencers",
-            value: String(kpis?.connected_influencers ?? 0),
+            value: String(kpis?.active_influencers ?? 0),
             sub: "conectados ativos",
           },
         ].map((kpi) => (

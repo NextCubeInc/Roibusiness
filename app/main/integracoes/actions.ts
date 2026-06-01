@@ -61,12 +61,16 @@ export async function savePaymentFees(fees: PaymentFees) {
     .upsert({ business_id: session.user.id, ...fees }, { onConflict: "business_id" })
   if (error) return { success: false, error: error.message }
 
-  // Taxas afetam todos os cálculos de receita e comissão — invalida tudo
+  // Taxas afetam cálculos de comissão — invalida caches do Next e marca banco como dirty
   const uid = session.user.id
-  revalidateTag(`${uid}-dashboard`, {})
-  revalidateTag(`${uid}-orders`, {})
   revalidateTag(`${uid}-ranking`, {})
   revalidateTag(`${uid}-influencers`, {})
+
+  // Marca business_kpi_cache como dirty (trigger só cobre orders, não fees)
+  await supabase
+    .from('business_kpi_cache')
+    .update({ dirty: true })
+    .eq('business_id', uid)
 
   return { success: true }
 }

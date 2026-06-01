@@ -116,7 +116,7 @@ export default async function getInfluencersData(
         { data: topInfluencers },
       ] = await Promise.all([
         client.rpc("get_business_influencers", rpcParams),
-        client.rpc("get_business_top_influencers", { p_limit: 5 }),
+        client.rpc("get_business_top_influencers_v_r1_0_1", { p_limit: 5 }),
       ])
 
       if (error) console.error(error)

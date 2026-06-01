@@ -76,7 +76,7 @@ export async function getRankingData(): Promise<{
         { data: campaigns },
         { data: influencers },
       ] = await Promise.all([
-        client.rpc("get_business_top_influencers", { p_limit: 50 }),
+        client.rpc("get_business_top_influencers_v_r1_0_1", { p_limit: 50 }),
         client.rpc("get_business_campaigns"),
         client.rpc("get_business_connected_influencers"),
       ])
