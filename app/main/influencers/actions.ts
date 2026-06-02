@@ -196,6 +196,10 @@ export async function updateCouponCommission(
       p_valid_from:         validFrom ?? null,
       p_valid_to:           validTo   ?? null,
     })
+    if (!error) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) revalidateTag(`${user.id}-influencers`, {})
+    }
     return { success: !error, error: error?.message }
   } catch (e) {
     console.error("updateCouponCommission error:", e)
@@ -208,6 +212,10 @@ export async function deleteCouponCommission(commission_id: string) {
     const supabase = await createClient()
     const { error } = await supabase
       .rpc('delete_coupon_commission', { p_commission_id: commission_id })
+    if (!error) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) revalidateTag(`${user.id}-influencers`, {})
+    }
     return { success: !error }
   } catch (e) {
     console.error("deleteCouponCommission error:", e)
@@ -220,6 +228,10 @@ export async function toggleCoupon(coupon_id: string, is_active: boolean) {
     const supabase = await createClient()
     const { error } = await supabase
       .rpc('toggle_coupon', { p_coupon_id: coupon_id, p_is_active: is_active })
+    if (!error) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) revalidateTag(`${user.id}-influencers`, {})
+    }
     return { success: !error }
   } catch (e) {
     console.error("toggleCoupon error:", e)
@@ -232,6 +244,10 @@ export async function deleteCoupon(coupon_id: string) {
     const supabase = await createClient()
     const { error } = await supabase
       .rpc('delete_coupon', { p_coupon_id: coupon_id })
+    if (!error) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) revalidateTag(`${user.id}-influencers`, {})
+    }
     return { success: !error }
   } catch (e) {
     console.error("deleteCoupon error:", e)
@@ -244,6 +260,10 @@ export async function removeBusinessInfluencer(influencer_id: string) {
     const supabase = await createClient()
     const { error } = await supabase
       .rpc('remove_business_influencer', { p_influencer_id: influencer_id })
+    if (!error) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) revalidateTag(`${user.id}-influencers`, {})
+    }
     return { success: !error }
   } catch (e) {
     console.error("removeBusinessInfluencer error:", e)
