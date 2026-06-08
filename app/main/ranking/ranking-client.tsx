@@ -174,6 +174,7 @@ export default function RankingClient({
   const [prizes, setPrizes]       = useState<PrizeRow[]>([{ ...EMPTY_PRIZE }])
   const [selectedInfs, setSelectedInfs] = useState<string[]>([])
   const [search, setSearch]       = useState("")
+  const [formError, setFormError] = useState<string | null>(null)
 
   const isEditing = editingCampaign !== null
   const canSave   = name.trim().length > 0 && prizes.length > 0 && selectedInfs.length > 0
@@ -217,6 +218,13 @@ export default function RankingClient({
     setPrizes([{ ...EMPTY_PRIZE }])
     setSelectedInfs([])
     setSearch("")
+    setFormError(null)
+  }
+
+  // Abre o Sheet sempre limpo (não depende do reset-no-fechamento)
+  function openCreate() {
+    resetSheet()
+    setSheetOpen(true)
   }
 
   function openEdit(campaign: Campaign) {
@@ -232,12 +240,14 @@ export default function RankingClient({
         ? parsed.map((p, i) => ({ ...p, _id: String(i + 1) }))
         : [{ ...EMPTY_PRIZE }]
     )
-    // Pré-seleciona por coupon_id (UUID direto, mais confiável que coupon_code)
+    // Pré-seleciona a partir dos participantes REAIS (cupons escalados), não do ranking.
+    // O ranking é agregado por influencer e não carrega coupon_id — usar ele aqui
+    // fazia a edição perder todos os participantes com cupom ao salvar.
     const keys: string[] = []
-    for (const r of campaign.ranking ?? []) {
-      const match = r.coupon_id
-        ? connectedInfluencers.find((i) => i.coupon_id === r.coupon_id)
-        : connectedInfluencers.find((i) => i.id === r.influencer_id && !i.coupon_id)
+    for (const p of campaign.participants ?? []) {
+      const match = p.coupon_id
+        ? connectedInfluencers.find((i) => i.coupon_id === p.coupon_id)
+        : connectedInfluencers.find((i) => i.id === p.influencer_id && !i.coupon_id)
       if (match) keys.push(infKey(match))
     }
     setSelectedInfs(keys)
@@ -252,70 +262,90 @@ export default function RankingClient({
 
   function handleSave() {
     if (!canSave) return
+    setFormError(null)
     startTransition(async () => {
-      const prizesPayload = prizes.map(({ _id, ...rest }) => rest)
+      // Remove o _id (só existe no client) e garante apenas os campos de Prize
+      const prizesPayload: Prize[] = prizes.map((p) => ({
+        position_start: p.position_start,
+        position_end:   p.position_end,
+        reward_type:    p.reward_type,
+        reward_value:   p.reward_value,
+        title:          p.title,
+      }))
 
-      if (isEditing && editingCampaign) {
-        const influencersPayload = selectedInfs.map((key) => {
+      // payload de influencers — calculado uma vez (era duplicado nos dois ramos)
+      const influencersPayload = selectedInfs
+        .map((key) => {
           const inf = connectedInfluencers.find((i) => infKey(i) === key)
           return { influencer_id: inf?.id ?? "", coupon_id: inf?.coupon_id ?? "" }
-        }).filter((p) => p.influencer_id)
-        const result = await updateCampaign({
-          id:          editingCampaign.id,
-          name,
-          description: desc,
-          starts_at:   startDate ? startDate.toISOString() : null,
-          ends_at:     endDate   ? endDate.toISOString()   : null,
-          prizes:      prizesPayload,
-          status,
-          influencers: influencersPayload,
         })
-        if (result?.success) {
-          setCampaigns((prev) => prev.map((c) =>
-            c.id === editingCampaign.id
-              ? {
-                  ...c,
-                  name,
-                  description: desc || null,
-                  starts_at:   startDate ? startDate.toISOString() : null,
-                  ends_at:     endDate   ? endDate.toISOString()   : null,
-                  prizes:      JSON.stringify(prizesPayload),
-                  status,
-                }
-              : c
-          ))
+        .filter((p) => p.influencer_id)
+
+      const participantsPayload = influencersPayload.map((p) => ({
+        influencer_id: p.influencer_id,
+        coupon_id:     p.coupon_id || null,
+      }))
+
+      try {
+        if (isEditing && editingCampaign) {
+          const result = await updateCampaign({
+            id:          editingCampaign.id,
+            name,
+            description: desc,
+            starts_at:   startDate ? startDate.toISOString() : null,
+            ends_at:     endDate   ? endDate.toISOString()   : null,
+            prizes:      prizesPayload,
+            status,
+            influencers: influencersPayload,
+          })
+          if (result?.success) {
+            setCampaigns((prev) => prev.map((c) =>
+              c.id === editingCampaign.id
+                ? {
+                    ...c,
+                    name,
+                    description:  desc || null,
+                    starts_at:    startDate ? startDate.toISOString() : null,
+                    ends_at:      endDate   ? endDate.toISOString()   : null,
+                    prizes:       JSON.stringify(prizesPayload),
+                    status,
+                    participants: participantsPayload,
+                  }
+                : c
+            ))
+            resetSheet()
+          }
+        } else {
+          const result = await createCampaign({
+            name,
+            description: desc,
+            starts_at:   startDate ? startDate.toISOString() : null,
+            ends_at:     endDate   ? endDate.toISOString()   : null,
+            prizes:      prizesPayload,
+            influencers: influencersPayload,
+          })
+          if (result?.success) {
+            setCampaigns((prev) => [
+              {
+                id:           result.id,
+                name,
+                description:  desc || null,
+                starts_at:    startDate ? startDate.toISOString() : null,
+                ends_at:      endDate   ? endDate.toISOString()   : null,
+                status:       "active",
+                prizes:       JSON.stringify(prizesPayload),
+                ranking:      [],
+                participants: participantsPayload,
+              },
+              ...prev,
+            ])
+            resetSheet()
+          }
         }
-      } else {
-        const influencersPayload = selectedInfs.map((key) => {
-          const inf = connectedInfluencers.find((i) => infKey(i) === key)
-          return { influencer_id: inf?.id ?? "", coupon_id: inf?.coupon_id ?? "" }
-        }).filter((p) => p.influencer_id)
-        const result = await createCampaign({
-          name,
-          description: desc,
-          starts_at:   startDate ? startDate.toISOString() : null,
-          ends_at:     endDate   ? endDate.toISOString()   : null,
-          prizes:      prizesPayload,
-          influencers: influencersPayload,
-        })
-        if (result?.success) {
-          setCampaigns((prev) => [
-            {
-              id:          result.id,
-              name,
-              description: desc || null,
-              starts_at:   startDate ? startDate.toISOString() : null,
-              ends_at:     endDate   ? endDate.toISOString()   : null,
-              status:      "active",
-              prizes:      JSON.stringify(prizesPayload),
-              ranking:     [],
-            },
-            ...prev,
-          ])
-        }
+      } catch (e) {
+        // Mantém o Sheet aberto e mostra o erro em vez de engolir a exceção
+        setFormError(e instanceof Error ? e.message : "Erro ao salvar a campanha. Tente novamente.")
       }
-
-      resetSheet()
     })
   }
 
@@ -330,7 +360,7 @@ export default function RankingClient({
             Ranking
           </span>
         </div>
-        <Button size="sm" onClick={() => setSheetOpen(true)}>
+        <Button size="sm" onClick={openCreate}>
           <Plus className="h-4 w-4 mr-1.5" />
           Criar Campanha
         </Button>
@@ -415,7 +445,7 @@ export default function RankingClient({
             <div className="flex flex-col items-center justify-center py-20">
               <Trophy className="h-10 w-10 text-muted-foreground/40 mb-3" />
               <p className="text-sm text-muted-foreground">Nenhuma campanha criada ainda</p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={() => setSheetOpen(true)}>
+              <Button variant="outline" size="sm" className="mt-4" onClick={openCreate}>
                 <Plus className="h-4 w-4 mr-1.5" />
                 Criar primeira campanha
               </Button>
@@ -530,7 +560,7 @@ export default function RankingClient({
                             type="number"
                             min={1}
                             value={prize.position_start}
-                            onChange={(e) => updatePrize(prize._id, "position_start", Number(e.target.value))}
+                            onChange={(e) => updatePrize(prize._id, "position_start", Math.max(1, Math.floor(Number(e.target.value)) || 1))}
                             className="h-8 text-xs"
                           />
                         </div>
@@ -540,7 +570,7 @@ export default function RankingClient({
                             type="number"
                             min={1}
                             value={prize.position_end}
-                            onChange={(e) => updatePrize(prize._id, "position_end", Number(e.target.value))}
+                            onChange={(e) => updatePrize(prize._id, "position_end", Math.max(1, Math.floor(Number(e.target.value)) || 1))}
                             className="h-8 text-xs"
                           />
                         </div>
@@ -608,13 +638,22 @@ export default function RankingClient({
                       return (
                         <div
                           key={key}
+                          role="button"
+                          tabIndex={0}
+                          aria-pressed={selected}
                           onClick={() => toggleInf(key)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault()
+                              toggleInf(key)
+                            }
+                          }}
                           className={cn(
-                            "flex items-center gap-3 w-full rounded-md px-3 py-2 text-left transition-colors cursor-pointer",
+                            "flex items-center gap-3 w-full rounded-md px-3 py-2 text-left transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                             selected ? "bg-primary/5" : "hover:bg-muted/50"
                           )}
                         >
-                          <Checkbox checked={selected} />
+                          <Checkbox checked={selected} tabIndex={-1} className="pointer-events-none" />
                           {inf.coupon && (
                             <Badge variant="secondary" className="font-mono text-xs shrink-0">
                               {inf.coupon}
@@ -642,6 +681,12 @@ export default function RankingClient({
               )}
             </div>
           </div>
+
+          {formError && (
+            <p className="px-4 py-2 text-sm text-destructive border-t" role="alert">
+              {formError}
+            </p>
+          )}
 
           <SheetFooter className="border-t flex-row justify-end">
             <Button variant="outline" onClick={resetSheet} disabled={isPending}>
@@ -673,12 +718,19 @@ function CampaignCard({
   const status        = campaign.status ?? "draft"
   const [deleteOpen, setDeleteOpen]   = useState(false)
   const [isDeleting, setIsDeleting]   = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   async function confirmDelete() {
     setIsDeleting(true)
-    await onDelete(campaign.id)
-    setIsDeleting(false)
-    setDeleteOpen(false)
+    setDeleteError(null)
+    try {
+      await onDelete(campaign.id)
+      setDeleteOpen(false)
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Erro ao excluir a campanha.")
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -712,7 +764,7 @@ function CampaignCard({
           </TableHeader>
           <TableBody>
             {campaign.ranking.map((r, i) => (
-              <TableRow key={r.coupon_id ?? `${r.influencer_id}-${i}`}>
+              <TableRow key={r.influencer_id}>
                 <TableCell><PositionBadge pos={i + 1} /></TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -784,7 +836,7 @@ function CampaignCard({
       </div>
 
       {/* Confirmação de exclusão */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <AlertDialog open={deleteOpen} onOpenChange={(o) => { setDeleteOpen(o); if (!o) setDeleteError(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir campanha?</AlertDialogTitle>
@@ -792,6 +844,9 @@ function CampaignCard({
               A campanha <strong>{campaign.name}</strong> e todos os seus participantes serão removidos. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deleteError && (
+            <p className="text-sm text-destructive" role="alert">{deleteError}</p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction

@@ -64,8 +64,8 @@ export async function setBusinessInfluencer(invite_code: string) {
       return { success: false, error: isDuplicate ? "duplicate_invite" as const : "unknown" as const }
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) revalidateTag(`${user.id}-influencers`, {})
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) revalidateTag(`${session.user.id}-influencers`, {})
 
     return { success: true, error: null }
   } catch (e) {
@@ -80,8 +80,8 @@ export async function cancelInvite(influencer_id: string) {
     .rpc('cancel_business_invite', { p_influencer_id: influencer_id })
 
   if (!error) {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) revalidateTag(`${user.id}-influencers`, {})
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) revalidateTag(`${session.user.id}-influencers`, {})
   }
 
   return { success: !error, error: error?.message ?? null }
@@ -147,8 +147,8 @@ export async function addCoupon(
       ...(validTo   ? { p_valid_to:   validTo   } : {}),
     })
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) revalidateTag(`${user.id}-influencers`, {})
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) revalidateTag(`${session.user.id}-influencers`, {})
     }
     return { success: !error, id: data as string | null, error: error?.message }
   } catch (e) {
@@ -172,8 +172,8 @@ export async function addCouponCommission(
       ...(validTo   ? { p_valid_to:   validTo   } : {}),
     })
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) revalidateTag(`${user.id}-influencers`, {})
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) revalidateTag(`${session.user.id}-influencers`, {})
     }
     return { success: !error, id: data as string | null, error: error?.message }
   } catch (e) {
@@ -197,8 +197,8 @@ export async function updateCouponCommission(
       p_valid_to:           validTo   ?? null,
     })
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) revalidateTag(`${user.id}-influencers`, {})
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) revalidateTag(`${session.user.id}-influencers`, {})
     }
     return { success: !error, error: error?.message }
   } catch (e) {
@@ -213,8 +213,8 @@ export async function deleteCouponCommission(commission_id: string) {
     const { error } = await supabase
       .rpc('delete_coupon_commission', { p_commission_id: commission_id })
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) revalidateTag(`${user.id}-influencers`, {})
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) revalidateTag(`${session.user.id}-influencers`, {})
     }
     return { success: !error }
   } catch (e) {
@@ -229,8 +229,8 @@ export async function toggleCoupon(coupon_id: string, is_active: boolean) {
     const { error } = await supabase
       .rpc('toggle_coupon', { p_coupon_id: coupon_id, p_is_active: is_active })
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) revalidateTag(`${user.id}-influencers`, {})
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) revalidateTag(`${session.user.id}-influencers`, {})
     }
     return { success: !error }
   } catch (e) {
@@ -245,8 +245,8 @@ export async function deleteCoupon(coupon_id: string) {
     const { error } = await supabase
       .rpc('delete_coupon', { p_coupon_id: coupon_id })
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) revalidateTag(`${user.id}-influencers`, {})
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) revalidateTag(`${session.user.id}-influencers`, {})
     }
     return { success: !error }
   } catch (e) {
@@ -261,8 +261,8 @@ export async function removeBusinessInfluencer(influencer_id: string) {
     const { error } = await supabase
       .rpc('remove_business_influencer', { p_influencer_id: influencer_id })
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) revalidateTag(`${user.id}-influencers`, {})
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) revalidateTag(`${session.user.id}-influencers`, {})
     }
     return { success: !error }
   } catch (e) {

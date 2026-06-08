@@ -161,6 +161,10 @@ export default function ClientPage({
   // Remover influencer
   const [removingInfluencer, setRemovingInfluencer] = useState<string | null>(null)
 
+  // Loading de delete
+  const [deletingCouponId, setDeletingCouponId] = useState<string | null>(null)
+  const [deletingPeriodId, setDeletingPeriodId] = useState<string | null>(null)
+
   const [search, setSearch] = useState("")
 
   const editingInfluencer = influencers.find(i => i.influencer_id === editId) ?? null
@@ -378,6 +382,7 @@ export default function ClientPage({
   }
 
   async function handleDeletePeriod(couponId: string, commissionId: string) {
+    setDeletingPeriodId(commissionId)
     try {
       await deleteCouponCommission(commissionId)
       setInfluencers(prev =>
@@ -393,6 +398,7 @@ export default function ClientPage({
     } catch (e) {
       console.error("handleDeletePeriod error:", e)
     }
+    setDeletingPeriodId(null)
   }
 
   async function handleToggleCoupon(coupon: Coupon) {
@@ -409,12 +415,14 @@ export default function ClientPage({
 
   async function handleDeleteCoupon(coupon_id: string) {
     if (!editId) return
+    setDeletingCouponId(coupon_id)
     try {
       await deleteCoupon(coupon_id)
       localUpdateCoupons(editId, prev => prev.filter(c => c.id !== coupon_id))
     } catch (e) {
       console.error("handleDeleteCoupon error:", e)
     }
+    setDeletingCouponId(null)
   }
 
   async function handleRemoveInfluencer(influencer_id: string) {
@@ -493,7 +501,20 @@ export default function ClientPage({
       </Sheet>
 
       {/* ── Sheet de editar coupons ── */}
-      <Sheet open={!!editId} onOpenChange={() => setEditId(null)}>
+      <Sheet open={!!editId} onOpenChange={() => {
+          setEditId(null)
+          setAddingPeriodFor(null)
+          setEditingPeriod(null)
+          setNewPeriodPercent(0)
+          setNewPeriodFrom(undefined)
+          setNewPeriodTo(undefined)
+          setNewCouponCode("")
+          setNewCommission(0)
+          setNewCouponFrom(undefined)
+          setNewCouponTo(undefined)
+          setDuplicateCouponError(false)
+          setNotLinkedError(false)
+        }}>
         <SheetContent className="flex flex-col gap-6 p-4">
           <SheetHeader>
             <SheetTitle>
@@ -523,9 +544,13 @@ export default function ClientPage({
                         <Switch checked={c.is_active} onCheckedChange={() => handleToggleCoupon(c)} />
                         <Button
                           variant="ghost" size="icon" className="h-7 w-7"
+                          disabled={deletingCouponId === c.id}
                           onClick={() => handleDeleteCoupon(c.id)}
                         >
-                          <Trash2 size={13} color="#C62828" />
+                          {deletingCouponId === c.id
+                            ? <Loader2 size={13} className="animate-spin" />
+                            : <Trash2 size={13} color="#C62828" />
+                          }
                         </Button>
                       </div>
                     </div>
@@ -566,7 +591,11 @@ export default function ClientPage({
                                     <Calendar
                                       mode="single"
                                       selected={editingPeriod.from}
-                                      onSelect={d => setEditingPeriod(prev => prev ? { ...prev, from: d } : null)}
+                                      onSelect={d => setEditingPeriod(prev => {
+                                        if (!prev) return null
+                                        const newTo = d && prev.to && d > prev.to ? undefined : prev.to
+                                        return { ...prev, from: d, to: newTo }
+                                      })}
                                       locale={ptBR}
                                     />
                                   </PopoverContent>
@@ -635,9 +664,13 @@ export default function ClientPage({
                                 </Button>
                                 <Button
                                   variant="ghost" size="icon" className="h-7 w-7"
+                                  disabled={deletingPeriodId === p.id}
                                   onClick={() => handleDeletePeriod(c.id, p.id)}
                                 >
-                                  <Trash2 size={13} color="#C62828" />
+                                  {deletingPeriodId === p.id
+                                    ? <Loader2 size={13} className="animate-spin" />
+                                    : <Trash2 size={13} color="#C62828" />
+                                  }
                                 </Button>
                               </div>
                             </div>
@@ -672,7 +705,13 @@ export default function ClientPage({
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={newPeriodFrom} onSelect={setNewPeriodFrom} locale={ptBR} />
+                                <Calendar
+                                  mode="single" selected={newPeriodFrom} locale={ptBR}
+                                  onSelect={d => {
+                                    setNewPeriodFrom(d)
+                                    if (d && newPeriodTo && d > newPeriodTo) setNewPeriodTo(undefined)
+                                  }}
+                                />
                               </PopoverContent>
                             </Popover>
 
@@ -756,7 +795,13 @@ export default function ClientPage({
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={newCouponFrom} onSelect={setNewCouponFrom} locale={ptBR} />
+                      <Calendar
+                        mode="single" selected={newCouponFrom} locale={ptBR}
+                        onSelect={d => {
+                          setNewCouponFrom(d)
+                          if (d && newCouponTo && d > newCouponTo) setNewCouponTo(undefined)
+                        }}
+                      />
                     </PopoverContent>
                   </Popover>
 

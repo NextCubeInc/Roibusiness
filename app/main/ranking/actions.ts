@@ -14,15 +14,20 @@ export type Prize = {
   title:          string
 }
 
+// Linha do ranking da campanha — agregada por influencer (soma todos os cupons dele).
 export type CampaignParticipant = {
   influencer_id:    string
   name:             string | null
   avatar_url:       string | null
-  coupon_id:        string | null
-  coupon_code:      string | null
   total_sales:      number
   total_commission: number
   total_orders:     number
+}
+
+// Referência crua de quem participa (1 entrada por cupom escalado) — usada na edição.
+export type CampaignParticipantRef = {
+  influencer_id: string
+  coupon_id:     string | null
 }
 
 export type Campaign = {
@@ -31,9 +36,10 @@ export type Campaign = {
   description: string | null
   starts_at:   string | null
   ends_at:     string | null
-  status:      string | null
-  prizes:      string | null   // JSON serializado no banco
-  ranking:     CampaignParticipant[]
+  status:       string | null
+  prizes:       string | null   // JSON serializado no banco
+  ranking:      CampaignParticipant[]
+  participants: CampaignParticipantRef[]   // cupons escalados — para pré-seleção na edição
 }
 
 export type RankingRow = {
@@ -72,16 +78,21 @@ export async function getRankingData(): Promise<{
       const client = createCachedClient(accessToken) // closure, não argumento
 
       const [
-        { data: ranking },
-        { data: campaigns },
-        { data: influencers },
+        { data: ranking,     error: rankingErr },
+        { data: campaigns,   error: campaignsErr },
+        { data: influencers, error: influencersErr },
       ] = await Promise.all([
         client.rpc("get_business_top_influencers_v_r1_0_1", { p_limit: 50 }),
         client.rpc("get_business_campaigns"),
         client.rpc("get_business_connected_influencers"),
       ])
 
-      const mappedInfluencers: ConnectedInfluencer[] = (influencers ?? []).map((inf: any) => ({
+      // Não silenciar falha de RPC — caso contrário a tela mostra "vazio" como se fosse sucesso
+      if (rankingErr)     console.error("[ranking] get_business_top_influencers_v_r1_0_1:", rankingErr.message)
+      if (campaignsErr)   console.error("[ranking] get_business_campaigns:", campaignsErr.message)
+      if (influencersErr) console.error("[ranking] get_business_connected_influencers:", influencersErr.message)
+
+      const mappedInfluencers: ConnectedInfluencer[] = (influencers ?? []).map((inf: ConnectedInfluencer) => ({
         id:         inf.id,
         name:       inf.name,
         avatar_url: inf.avatar_url,
@@ -125,13 +136,50 @@ export type UpdateCampaignInput = {
   influencers: { influencer_id: string; coupon_id: string }[]
 }
 
+const REWARD_TYPES  = ["valor", "porcentagem", "produto", "frete"]
+const STATUS_VALUES = ["active", "paused", "finished", "draft", "cancelled"]
+
+// Validação server-side — as server actions podem ser chamadas direto, sem passar pela UI.
+function validateCampaign(input: {
+  name:        string
+  prizes:      Prize[]
+  influencers: { influencer_id: string; coupon_id: string }[]
+  starts_at?:  string | null
+  ends_at?:    string | null
+  status?:     string
+}) {
+  if (!input.name?.trim())             throw new Error("Informe o nome da campanha.")
+  if (input.name.trim().length > 120)  throw new Error("Nome muito longo (máx. 120 caracteres).")
+  if (!input.influencers?.length)      throw new Error("Selecione ao menos um influencer.")
+  if (!input.prizes?.length)           throw new Error("Adicione ao menos um prêmio.")
+
+  for (const p of input.prizes) {
+    if (!Number.isInteger(p.position_start) || p.position_start < 1)
+      throw new Error("Posição inicial do prêmio deve ser um número inteiro ≥ 1.")
+    if (!Number.isInteger(p.position_end) || p.position_end < p.position_start)
+      throw new Error("Posição final do prêmio deve ser ≥ posição inicial.")
+    if (!REWARD_TYPES.includes(p.reward_type))
+      throw new Error("Tipo de prêmio inválido.")
+    if (p.reward_type !== "frete" && !p.reward_value?.trim())
+      throw new Error("Informe o valor/descrição do prêmio.")
+  }
+
+  if (input.status && !STATUS_VALUES.includes(input.status))
+    throw new Error("Status inválido.")
+
+  if (input.starts_at && input.ends_at && new Date(input.ends_at) < new Date(input.starts_at))
+    throw new Error("A data de fim não pode ser anterior à data de início.")
+}
+
 export async function updateCampaign(input: UpdateCampaignInput) {
+  validateCampaign(input)
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Não autenticado")
 
-  // Atualiza campos da campanha
-  const { error } = await supabase
+  // Atualiza campos da campanha — .select() confirma que a campanha existe E pertence ao usuário
+  const { data: updated, error } = await supabase
     .from("campaigns")
     .update({
       name:        input.name,
@@ -143,40 +191,39 @@ export async function updateCampaign(input: UpdateCampaignInput) {
     })
     .eq("id", input.id)
     .eq("business_id", user.id)
+    .select("id")
 
   if (error) throw new Error(error.message)
+  if (!updated || updated.length === 0)
+    throw new Error("Campanha não encontrada ou sem permissão.")
 
   // Sincroniza participantes por coupon_id (um influencer pode ter N cupons na mesma campanha)
-  const { data: current } = await supabase
+  const { data: current, error: currentErr } = await supabase
     .from("campaign_participants")
-    .select("influencer_id, coupon_id")
+    .select("id, influencer_id, coupon_id")
     .eq("campaign_id", input.id)
+  if (currentErr) throw new Error(currentErr.message)
 
   // Chave de comparação: coupon_id quando existe, senão influencer_id
-  const currentKeys = (current ?? []).map((p: { influencer_id: string; coupon_id: string | null }) =>
-    p.coupon_id ?? p.influencer_id
-  )
-  const newKeys = input.influencers.map((i) => i.coupon_id || i.influencer_id)
+  const newKeys     = new Set(input.influencers.map((i) => i.coupon_id || i.influencer_id))
+  const currentKeys = new Set((current ?? []).map((p) => p.coupon_id ?? p.influencer_id))
 
-  // Remove os que saíram
-  const toRemove = (current ?? []).filter((p: { influencer_id: string; coupon_id: string | null }) =>
-    !newKeys.includes(p.coupon_id ?? p.influencer_id)
-  )
-  for (const p of toRemove) {
-    const q = supabase
+  // Remove os que saíram — um único DELETE por id (evita N+1)
+  const removeIds = (current ?? [])
+    .filter((p) => !newKeys.has(p.coupon_id ?? p.influencer_id))
+    .map((p) => p.id)
+  if (removeIds.length > 0) {
+    const { error: delErr } = await supabase
       .from("campaign_participants")
       .delete()
-      .eq("campaign_id", input.id)
-      .eq("influencer_id", p.influencer_id)
-    if (p.coupon_id) q.eq("coupon_id", p.coupon_id)
-    else q.is("coupon_id", null)
-    await q
+      .in("id", removeIds)
+    if (delErr) throw new Error(delErr.message)
   }
 
   // Adiciona os novos
-  const toAdd = input.influencers.filter((i) => !currentKeys.includes(i.coupon_id || i.influencer_id))
+  const toAdd = input.influencers.filter((i) => !currentKeys.has(i.coupon_id || i.influencer_id))
   if (toAdd.length > 0) {
-    await supabase
+    const { error: insErr } = await supabase
       .from("campaign_participants")
       .insert(
         toAdd.map((inf) => ({
@@ -187,6 +234,7 @@ export async function updateCampaign(input: UpdateCampaignInput) {
           joined_at:     new Date().toISOString(),
         }))
       )
+    if (insErr) throw new Error(insErr.message)
   }
 
   revalidateTag(`${user.id}-ranking`, {})
@@ -211,6 +259,8 @@ export async function deleteCampaign(campaign_id: string) {
 }
 
 export async function createCampaign(input: CreateCampaignInput) {
+  validateCampaign(input)
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()

@@ -20,13 +20,6 @@ export default function RankingLoading() {
         <Skeleton className="h-9 w-32 rounded-md" />
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-3">
-        <Skeleton className="h-9 w-48 rounded-md" />
-        <Skeleton className="h-9 w-36 rounded-md" />
-        <Skeleton className="h-9 w-9 rounded-md" />
-      </div>
-
       {/* Ranking table */}
       <Card className="overflow-hidden">
         <div className="p-4 flex flex-col gap-3">
