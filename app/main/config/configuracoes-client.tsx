@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/ui/user-avatar"
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import { Loader2, CheckCircle2, XCircle } from "lucide-react"
@@ -111,14 +111,12 @@ function PerfilTab({ settings }: { settings: BusinessSettings }) {
     <Card className="p-6 space-y-6">
       {/* Avatar */}
       <div className="flex items-center gap-4">
-        <Avatar className="h-16 w-16 text-lg">
-          {settings.avatar_url && (
-            <AvatarImage src={`${process.env.NEXT_PUBLIC_BUCKET_URL}${settings.avatar_url}`} />
-          )}
-          <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
-            {initials(settings.name)}
-          </AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          avatarUrl={settings.avatar_url}
+          name={settings.name}
+          size={64}
+          fallbackClassName="bg-primary text-primary-foreground text-lg font-semibold"
+        />
         <Button variant="outline" size="sm" disabled>Alterar foto</Button>
       </div>
 

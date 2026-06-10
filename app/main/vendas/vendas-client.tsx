@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/ui/user-avatar"
 import {
   Table,
   TableBody,
@@ -253,14 +253,12 @@ export default function VendasClient({
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        {order.influencer_avatar && (
-                          <AvatarImage src={order.influencer_avatar} />
-                        )}
-                        <AvatarFallback className="text-[8px] font-medium">
-                          {initials(order.influencer_name)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        avatarUrl={order.influencer_avatar}
+                        name={order.influencer_name}
+                        size={24}
+                        fallbackClassName="text-[8px] font-medium"
+                      />
                       <span className="text-xs">{order.influencer_name ?? "—"}</span>
                     </div>
                   </TableCell>

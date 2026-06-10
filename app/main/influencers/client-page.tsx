@@ -1,6 +1,6 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/ui/user-avatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -58,9 +58,6 @@ const brl = (v: number | null | undefined) =>
   (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 
 const text = (v: string | null | undefined) => v ?? ""
-
-const avatarSrc = (v: string | null | undefined) =>
-  v ? `${process.env.NEXT_PUBLIC_BUCKET_URL ?? ""}${v}` : undefined
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", {
@@ -466,12 +463,13 @@ export default function ClientPage({
                   key={inv.influencer_id}
                   className="flex items-center gap-3 border rounded-lg px-3 py-3"
                 >
-                  <Avatar className="h-10 w-10 shrink-0">
-                    <AvatarImage src={avatarSrc(inv.avatar_url)} />
-                    <AvatarFallback className="text-xs font-semibold">
-                      {text(inv.name).slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    avatarUrl={inv.avatar_url}
+                    name={inv.name}
+                    size={40}
+                    className="shrink-0"
+                    fallbackClassName="font-semibold"
+                  />
 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{text(inv.name)}</p>
@@ -944,12 +942,12 @@ export default function ClientPage({
                   <>
                     <Card className="w-full p-4 border-success/30">
                       <div className="flex items-center gap-4">
-                        <Avatar className="h-14 w-14">
-                          <AvatarImage src={avatarSrc(foundInfluencer.avatar_url)} />
-                          <AvatarFallback className="text-sm font-semibold">
-                            {text(foundInfluencer.name).slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar
+                          avatarUrl={foundInfluencer.avatar_url}
+                          name={foundInfluencer.name}
+                          size={56}
+                          fallbackClassName="text-sm font-semibold"
+                        />
                         <div>
                           <p className="text-lg font-semibold">{text(foundInfluencer.name)}</p>
                           <p className="text-sm text-muted-foreground">{text(foundInfluencer.instagram)}</p>
@@ -1123,12 +1121,12 @@ export default function ClientPage({
               <TableRow key={inf.influencer_id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={avatarSrc(inf.avatar_url)} />
-                      <AvatarFallback className="text-xs font-semibold">
-                        {text(inf.name).slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar
+                      avatarUrl={inf.avatar_url}
+                      name={inf.name}
+                      size={36}
+                      fallbackClassName="font-semibold"
+                    />
                     <div>
                       <p className="font-medium text-sm">{text(inf.name)}</p>
                       <p className="text-xs text-muted-foreground">{text(inf.instagram)}</p>

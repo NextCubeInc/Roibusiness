@@ -22,7 +22,7 @@ import {
 } from "recharts"
 import { BadgeQuestionMark, Plus } from "lucide-react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/ui/user-avatar"
 
 
 
@@ -400,10 +400,11 @@ export default function DashboardClient({
                   <TableRow key={inf.influencer_id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Avatar>
-                          <AvatarImage src={`${process.env.NEXT_PUBLIC_BUCKET_URL}${inf.avatar_url}`}/>
-                          <AvatarFallback>{inf.name?.slice(0, 2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
+                        <UserAvatar
+                          avatarUrl={inf.avatar_url}
+                          name={inf.name}
+                          size={32}
+                        />
                         <div>
                           <p className="text-sm font-medium leading-none">
                             {inf.name ?? "—"}

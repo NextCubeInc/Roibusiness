@@ -4,7 +4,7 @@ import { useState, useTransition } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/ui/user-avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -412,12 +412,12 @@ export default function RankingClient({
                       <TableCell><PositionBadge pos={i + 1} /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            {inf.avatar_url && <AvatarImage src={`${process.env.NEXT_PUBLIC_BUCKET_URL}${inf.avatar_url}`} />}
-                            <AvatarFallback className="text-[10px] font-medium">
-                              {initials(inf.name)}
-                            </AvatarFallback>
-                          </Avatar>
+                          <UserAvatar
+                            avatarUrl={inf.avatar_url}
+                            name={inf.name}
+                            size={32}
+                            fallbackClassName="text-[10px] font-medium"
+                          />
                           <div className="flex items-center gap-1.5">
                             {i === 0 && <Crown className="h-3.5 w-3.5 text-yellow-500" />}
                             <span className="text-sm font-medium">{inf.name ?? "—"}</span>
@@ -659,12 +659,13 @@ export default function RankingClient({
                               {inf.coupon}
                             </Badge>
                           )}
-                          <Avatar className="h-6 w-6 shrink-0">
-                            {inf.avatar_url && <AvatarImage src={`${process.env.NEXT_PUBLIC_BUCKET_URL}${inf.avatar_url}`} />}
-                            <AvatarFallback className="text-[9px] font-medium">
-                              {initials(inf.name)}
-                            </AvatarFallback>
-                          </Avatar>
+                          <UserAvatar
+                            avatarUrl={inf.avatar_url}
+                            name={inf.name}
+                            size={24}
+                            className="shrink-0"
+                            fallbackClassName="text-[9px] font-medium"
+                          />
                           <span className="text-xs text-muted-foreground truncate">
                             {inf.name ?? "—"}
                           </span>
@@ -768,12 +769,12 @@ function CampaignCard({
                 <TableCell><PositionBadge pos={i + 1} /></TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      {r.avatar_url && <AvatarImage src={`${process.env.NEXT_PUBLIC_BUCKET_URL}${r.avatar_url}`} />}
-                      <AvatarFallback className="text-[8px] font-medium">
-                        {initials(r.name)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar
+                      avatarUrl={r.avatar_url}
+                      name={r.name}
+                      size={24}
+                      fallbackClassName="text-[8px] font-medium"
+                    />
                     <span className="text-xs">{r.name ?? "—"}</span>
                   </div>
                 </TableCell>
