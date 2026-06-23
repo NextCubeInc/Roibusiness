@@ -12,6 +12,7 @@ export type OrderRow = {
   influencer_name: string | null
   influencer_avatar: string | null
   commission: number
+  status: string
 }
 
 export type OrdersSummary = {

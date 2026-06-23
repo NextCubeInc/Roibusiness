@@ -57,6 +57,11 @@ type LastOrder = {
   platform: string | null
   total: number
   commission: number
+  status: string
+}
+
+function isCancelled(status: string) {
+  return status !== 'open' && status !== 'paid'
 }
 
 type TopInfluencer = {
@@ -347,33 +352,44 @@ export default function DashboardClient({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lastOrders.map((order, i) => (
-                  <TableRow key={i}>
+                {lastOrders.map((order, i) => {
+                  const cancelled = isCancelled(order.status)
+                  return (
+                  <TableRow key={i} className={cancelled ? "opacity-50" : undefined}>
                     <TableCell className="text-muted-foreground text-xs">
                       {formatDate(order.ordered_at)}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className={`font-mono text-xs${cancelled ? " line-through" : ""}`}>
                       {order.external_id ?? "—"}
                     </TableCell>
-                    <TableCell>{order.influencer ?? "—"}</TableCell>
+                    <TableCell className={cancelled ? "text-muted-foreground" : undefined}>
+                      {order.influencer ?? "—"}
+                    </TableCell>
                     <TableCell>
                       <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
                         {order.coupon ?? "—"}
                       </code>
                     </TableCell>
                     <TableCell>
-                      <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-0.5 rounded font-medium">
-                        {order.platform ?? "—"}
-                      </span>
+                      {cancelled ? (
+                        <span className="text-xs bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 px-2 py-0.5 rounded font-medium">
+                          {order.status}
+                        </span>
+                      ) : (
+                        <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-0.5 rounded font-medium">
+                          {order.platform ?? "—"}
+                        </span>
+                      )}
                     </TableCell>
-                    <TableCell className="text-right font-medium">
+                    <TableCell className={`text-right font-medium${cancelled ? " line-through text-muted-foreground" : ""}`}>
                       {brl(order.total)}
                     </TableCell>
-                    <TableCell className="text-right text-green-400">
-                      {brl(order.commission)}
+                    <TableCell className={`text-right${cancelled ? " text-muted-foreground" : " text-green-400"}`}>
+                      {cancelled ? "—" : brl(order.commission)}
                     </TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           </CardContent>

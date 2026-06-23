@@ -39,6 +39,10 @@ function initials(name: string | null) {
   return name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
 }
 
+function isCancelled(status: string) {
+  return status !== 'open' && status !== 'paid'
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -127,13 +131,14 @@ export default function VendasClient({
 
   function handleExport() {
     if (!orders.length) return
-    const headers = ["Data", "ID Pedido", "Influencer", "Cupom", "Plataforma", "Valor", "Comissão"]
+    const headers = ["Data", "ID Pedido", "Influencer", "Cupom", "Plataforma", "Status", "Valor", "Comissão"]
     const rows = orders.map((o) => [
       o.ordered_at ? format(new Date(o.ordered_at), "dd/MM/yyyy HH:mm") : "",
       o.external_id ?? "",
       o.influencer_name ?? "",
       o.coupon ?? "",
       o.store_type ?? "",
+      o.status ?? "",
       o.total.toFixed(2),
       o.commission.toFixed(2),
     ])
@@ -241,17 +246,19 @@ export default function VendasClient({
               </TableRow>
             </TableHeader>
             <TableBody className={isPending ? "opacity-50 pointer-events-none" : ""}>
-              {orders.map((order) => (
-                <TableRow key={order.id} className="hover:bg-muted/50">
+              {orders.map((order) => {
+                const cancelled = isCancelled(order.status)
+                return (
+                <TableRow key={order.id} className={`hover:bg-muted/50${cancelled ? " opacity-50" : ""}`}>
                   <TableCell className="text-xs text-muted-foreground">
                     {order.ordered_at
                       ? format(new Date(order.ordered_at), "dd MMM, HH:mm", { locale: ptBR })
                       : "—"}
                   </TableCell>
-                  <TableCell className="text-xs font-mono text-muted-foreground">
+                  <TableCell className={`text-xs font-mono text-muted-foreground${cancelled ? " line-through" : ""}`}>
                     {order.external_id ?? "—"}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className={cancelled ? "text-muted-foreground" : undefined}>
                     <div className="flex items-center gap-2">
                       <UserAvatar
                         avatarUrl={order.influencer_avatar}
@@ -268,25 +275,32 @@ export default function VendasClient({
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={
-                        order.store_type?.toLowerCase() === "nuvemshop"
-                          ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-[10px]"
-                          : "text-[10px]"
-                      }
-                    >
-                      {order.store_type ?? "—"}
-                    </Badge>
+                    {cancelled ? (
+                      <Badge className="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 text-[10px] border-0">
+                        {order.status}
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="secondary"
+                        className={
+                          order.store_type?.toLowerCase() === "nuvemshop"
+                            ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-[10px]"
+                            : "text-[10px]"
+                        }
+                      >
+                        {order.store_type ?? "—"}
+                      </Badge>
+                    )}
                   </TableCell>
-                  <TableCell className="text-xs text-right">
-                    {brl(order.total?? 0)}
+                  <TableCell className={`text-xs text-right${cancelled ? " line-through text-muted-foreground" : ""}`}>
+                    {brl(order.total ?? 0)}
                   </TableCell>
-                  <TableCell className="text-xs text-right font-medium text-green-400">
-                    {brl(order.commission?? 0)}
+                  <TableCell className={`text-xs text-right font-medium${cancelled ? " text-muted-foreground" : " text-green-400"}`}>
+                    {cancelled ? "—" : brl(order.commission ?? 0)}
                   </TableCell>
                 </TableRow>
-              ))}
+                )
+              })}
             </TableBody>
           </Table>
         )}
