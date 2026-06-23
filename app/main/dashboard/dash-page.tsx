@@ -57,10 +57,11 @@ type LastOrder = {
   platform: string | null
   total: number
   commission: number
-  status: string
+  status?: string
 }
 
-function isCancelled(status: string) {
+function isCancelled(status: string | null | undefined) {
+  if (!status) return false
   return status !== 'open' && status !== 'paid'
 }
 

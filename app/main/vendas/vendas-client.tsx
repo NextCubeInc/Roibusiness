@@ -39,7 +39,8 @@ function initials(name: string | null) {
   return name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
 }
 
-function isCancelled(status: string) {
+function isCancelled(status: string | null | undefined) {
+  if (!status) return false
   return status !== 'open' && status !== 'paid'
 }
 
