@@ -385,8 +385,8 @@ export default function DashboardClient({
                     <TableCell className={`text-right font-medium${cancelled ? " line-through text-muted-foreground" : ""}`}>
                       {brl(order.total)}
                     </TableCell>
-                    <TableCell className={`text-right${cancelled ? " text-muted-foreground" : " text-green-400"}`}>
-                      {cancelled ? "—" : brl(order.commission)}
+                    <TableCell className={`text-right${cancelled ? " line-through text-muted-foreground" : " text-green-400"}`}>
+                      {brl(order.commission)}
                     </TableCell>
                   </TableRow>
                   )

@@ -296,8 +296,8 @@ export default function VendasClient({
                   <TableCell className={`text-xs text-right${cancelled ? " line-through text-muted-foreground" : ""}`}>
                     {brl(order.total ?? 0)}
                   </TableCell>
-                  <TableCell className={`text-xs text-right font-medium${cancelled ? " text-muted-foreground" : " text-green-400"}`}>
-                    {cancelled ? "—" : brl(order.commission ?? 0)}
+                  <TableCell className={`text-xs text-right font-medium${cancelled ? " line-through text-muted-foreground" : " text-green-400"}`}>
+                    {brl(order.commission ?? 0)}
                   </TableCell>
                 </TableRow>
                 )
