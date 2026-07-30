@@ -49,7 +49,7 @@ export function Masonry<T extends MasonryItem>({
   }, [width, columnsBreakpoints])
 
   const layout = useMemo(() => {
-    if (width === 0) return { positions: [] as (T & { x: number; y: number; w: number })[], height: 0 }
+    if (width === 0) return { positions: [] as (T & { x: number; y: number; w: number; _h: number })[], height: 0 }
     const colWidth = (width - gap * (columns - 1)) / columns
     const colHeights = new Array(columns).fill(0)
     const positions = items.map((item) => {
