@@ -1,6 +1,6 @@
 # Contexto — Refatoração R1.0.1
 
-> Projeto Supabase: `kfkiskakbhnbwabhaghv`  
+> Projeto Supabase: `damubikhrskzrxcgxcoc`  
 > Convenção: funções novas com sufixo `_v_r1_0_1` (lowercase — PostgREST é case-sensitive)  
 > Regra: nunca dropar função antiga antes de 48h com a nova em produção
 

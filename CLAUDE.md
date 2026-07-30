@@ -3,7 +3,7 @@
 ## Stack
 
 - **Next.js 16.1.7** App Router + Turbopack
-- **Supabase** (project: `kfkiskakbhnbwabhaghv`) — PostgreSQL + Auth + Storage
+- **Supabase** (project: `damubikhrskzrxcgxcoc`) — PostgreSQL + Auth + Storage
 - **@supabase/ssr** para o cliente com cookies (server components, server actions)
 - **@supabase/supabase-js** para o cliente com JWT header (dentro do `unstable_cache`)
 - Workspace: `/Users/gabrielmarques/Roibusiness`

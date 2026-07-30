@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { LayoutDashboard, Pen, Plus, Trash2, Loader2, Clock, X, CalendarIcon, BadgeQuestionMark } from "lucide-react"
 import { useState, useTransition } from "react"
+import Link from "next/link"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { getInfluencerByCode, setBusinessInfluencer, cancelInvite, addCoupon, addCouponCommission, updateCouponCommission, deleteCouponCommission, toggleCoupon, deleteCoupon, removeBusinessInfluencer, getPendingInvites } from "./actions"
@@ -41,14 +42,18 @@ type Coupon = {
 }
 
 type InfluencerRow = {
-  influencer_id: string
-  name:          string | null
-  instagram:     string | null
-  avatar_url:    string | null
-  coupons:       Coupon[] | null
-  vendas_mes:    number | null
-  comissao_mes:  number | null
+  influencer_id:   string
+  name:            string | null
+  instagram:       string | null
+  avatar_url:      string | null
+  coupons:         Coupon[] | null
+  vendas_mes:      number | null
+  comissao_mes:    number | null
+  followers_count: number | null
+  posts_count:     number | null
 }
+
+const nf = (v: number | null | undefined) => (v == null ? "—" : v.toLocaleString("pt-BR"))
 
 type InviteError = "duplicate_invite" | "not_found" | "unknown" | null
 
@@ -1105,6 +1110,8 @@ export default function ClientPage({
             <TableRow>
               <TableHead>Influencer</TableHead>
               <TableHead>Cupons</TableHead>
+              <TableHead>Seguidores</TableHead>
+              <TableHead>Posts</TableHead>
               <TableHead>Vendas</TableHead>
               <TableHead>Comissão</TableHead>
               <TableHead className="text-right">Ações</TableHead>
@@ -1113,7 +1120,7 @@ export default function ClientPage({
           <TableBody className={isPending ? "opacity-50 pointer-events-none" : ""}>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-12">
+                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-12">
                   Nenhum influencer encontrado
                 </TableCell>
               </TableRow>
@@ -1154,11 +1161,17 @@ export default function ClientPage({
                   </div>
                 </TableCell>
 
+                <TableCell className="text-sm font-medium">{nf(inf.followers_count)}</TableCell>
+                <TableCell className="text-sm">{nf(inf.posts_count)}</TableCell>
                 <TableCell className="text-sm">{brl(inf.vendas_mes)}</TableCell>
                 <TableCell className="text-sm font-medium text-green-400">{brl(inf.comissao_mes)}</TableCell>
 
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" disabled><LayoutDashboard className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="sm" asChild title="Ver métricas de Instagram">
+                    <Link href={`/main/comunidade/influencer/${inf.influencer_id}`}>
+                      <LayoutDashboard className="h-4 w-4" />
+                    </Link>
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={() => setEditId(inf.influencer_id)}>
                     <Pen className="h-4 w-4" />
                   </Button>

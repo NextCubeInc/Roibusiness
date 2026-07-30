@@ -15,8 +15,10 @@ export type BusinessSettings = {
   plan_code:               string | null
   max_influencers:         number
   max_orders:              number
+  max_push:                number
   influencers_count:       number
   orders_count:            number
+  notifications_count:     number
 }
 
 export async function getBusinessSettings(): Promise<BusinessSettings | null> {

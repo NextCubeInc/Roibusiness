@@ -75,6 +75,65 @@ export async function savePaymentFees(fees: PaymentFees) {
   return { success: true }
 }
 
+export type InstagramConnection = {
+  connected:  boolean
+  username:   string | null
+  expires_in: string | null
+}
+
+export async function getInstagramConnection(): Promise<InstagramConnection> {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return { connected: false, username: null, expires_in: null }
+  const { data } = await supabase
+    .from("insta_connection")
+    .select("username, expires_in")
+    .eq("user_id", session.user.id)
+    .maybeSingle()
+  return {
+    connected:  !!data,
+    username:   data?.username ?? null,
+    expires_in: data?.expires_in ?? null,
+  }
+}
+
+export async function instagramLink() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const clientId    = process.env.INSTAGRAM_CLIENT_ID!
+  const redirectUri = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/super-service`
+  const scope = [
+    "instagram_business_basic",
+    "instagram_business_manage_comments",
+    "instagram_business_manage_messages",
+  ].join(",")
+
+  // Formato "Business Login for Instagram" (Instagram API with Instagram Login).
+  // É a mesma URL que o dashboard gera em: Instagram > API setup with Instagram login > Business login settings > Embed URL.
+  redirect(
+    `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1` +
+    `&client_id=${clientId}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&response_type=code&scope=${encodeURIComponent(scope)}` +
+    `&state=${encodeURIComponent(`${user.id}|web`)}`
+  )
+}
+
+export async function disconnectInstagram() {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return { success: false }
+  const { error } = await supabase
+    .from("insta_connection")
+    .delete()
+    .eq("user_id", session.user.id)
+  if (error) return { success: false, error: error.message }
+  revalidatePath("/main/integracoes")
+  return { success: true }
+}
+
 export async function disconnectStore(store_id: string) {
   const supabase = await createClient()
 

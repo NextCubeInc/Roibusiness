@@ -17,6 +17,7 @@ import { Separator } from "../ui/separator"
 import {
   LayoutDashboard,
   Users,
+  Contact,
   ShoppingBag,
   TrendingUp,
   Zap,
@@ -25,6 +26,7 @@ import {
   CreditCard,
   LogOut,
   Stars,
+  Bell,
 } from "lucide-react"
 import Link from "next/link"
 import { UserAvatar } from "../ui/user-avatar"
@@ -35,6 +37,8 @@ import type { BusinessProfile } from "@/lib/types"
 const sidebarRoutes = [
   { id: 11, title: "Dashboard", icon: LayoutDashboard, Link: "/main/dashboard" },
   { id: 12, title: "Influencers", icon: Users, Link: "/main/influencers" },
+  { id: 17, title: "Notificações", icon: Bell, Link: "/main/notificacoes" },
+  { id: 16, title: "Comunidade", icon: Contact, Link: "/main/comunidade" },
   { id: 13, title: "Vendas", icon: ShoppingBag, Link: "/main/vendas" },
   { id: 14, title: "Ranking", icon: TrendingUp, Link: "/main/ranking" },
   { id: 15, title: "Integrações", icon: Zap, Link: "/main/integracoes" },
@@ -147,10 +151,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
                     <User/>
                     Account
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={()=> redirect("/main/plans")}>
+                  {/* <DropdownMenuItem onClick={()=> redirect("/main/config")}>
                     <Stars/>
                     Plans
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>

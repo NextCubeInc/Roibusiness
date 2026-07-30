@@ -18,20 +18,28 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useState, useTransition } from "react"
-import { nuvemShopLink, disconnectStore, type StoreInfo } from "./actions"
-import { Loader2, Settings, Unplug } from "lucide-react"
+import { nuvemShopLink, disconnectStore, instagramLink, disconnectInstagram, type StoreInfo, type InstagramConnection } from "./actions"
+import { Loader2, Settings, Unplug, Camera } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { set } from "date-fns"
 import { DialogDemo } from "./txdialog"
 
 interface Props {
   stores: StoreInfo[]
+  instagram: InstagramConnection
 }
 
-export default function ClientPage({ stores: initialStores }: Props) {
+export default function ClientPage({ stores: initialStores, instagram }: Props) {
   const { open } = useSidebar()
   const [stores, setStores] = useState<StoreInfo[]>(initialStores)
   const [isPending, startTransition] = useTransition()
+  const [igPending, startIgTransition] = useTransition()
+
+  function handleDisconnectInstagram() {
+    startIgTransition(async () => {
+      await disconnectInstagram()
+    })
+  }
 
   function isConnected(type: string) {
     return stores.some(s => s.store_type === type && s.is_synced)
@@ -163,6 +171,67 @@ export default function ClientPage({ stores: initialStores }: Props) {
               </CardFooter>
             </Field>
           </form>
+        </Card>
+
+        {/* Instagram */}
+        <Card className="h-full">
+          <Field className="flex flex-col h-full">
+            <CardContent className="flex flex-col gap-2 flex-1">
+              <div className="flex flex-row gap-3 items-center">
+                <Camera size={40} className="text-pink-600" />
+                <div className="flex flex-col gap-0.5">
+                  <CardTitle>Instagram</CardTitle>
+                  {instagram.connected ? (
+                    <Badge className="bg-green-600 w-fit">
+                      {instagram.username ? `@${instagram.username}` : "Conectado"}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="w-fit">Desconectado</Badge>
+                  )}
+                </div>
+              </div>
+              <CardDescription>
+                Conecte sua conta profissional para coletar seguidores, posts, reels e menções.
+              </CardDescription>
+            </CardContent>
+            <CardFooter>
+              {instagram.connected ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="outline" className="w-full text-destructive hover:text-destructive">
+                      {igPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Unplug className="h-4 w-4 mr-2" />}
+                      Desconectar
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Desconectar Instagram?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Isso remove o token de acesso. A coleta de métricas será interrompida.
+                        Você pode reconectar a qualquer momento.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={handleDisconnectInstagram}
+                      >
+                        Desconectar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : (
+                <form action={instagramLink} className="w-full">
+                  <Button type="submit" className="w-full">
+                    <Camera className="h-4 w-4 mr-2" />
+                    Conectar
+                  </Button>
+                </form>
+              )}
+            </CardFooter>
+          </Field>
         </Card>
 
         {/* Pagar.me */}

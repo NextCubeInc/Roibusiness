@@ -166,6 +166,10 @@ function PlanoTab({ settings }: { settings: BusinessSettings }) {
     ? Math.round((settings.orders_count / settings.max_orders) * 100)
     : 0
 
+  const pushPercent = settings.max_push > 0
+    ? Math.round((settings.notifications_count / settings.max_push) * 100)
+    : 0
+
   return (
     <Card className="p-6 space-y-6">
       <div className="flex items-center gap-3">
@@ -200,6 +204,15 @@ function PlanoTab({ settings }: { settings: BusinessSettings }) {
             </span>
           </div>
           <Progress value={ordersPercent} className="h-2" />
+        </div>
+        <div>
+          <div className="flex justify-between text-sm mb-1">
+            <span>Notificações <span className="text-xs text-muted-foreground">(este mês)</span></span>
+            <span className="text-muted-foreground">
+              {settings.notifications_count}/{settings.max_push || "∞"}
+            </span>
+          </div>
+          <Progress value={pushPercent} className="h-2" />
         </div>
       </div>
 

@@ -8,9 +8,17 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
-  const next = searchParams.get('next') ?? '/'
+
+  // Recuperação de senha sempre leva à tela de nova senha. Demais fluxos
+  // (confirmação de cadastro etc.) usam `next` ou a raiz.
+  const next =
+    type === 'recovery'
+      ? '/reset-password'
+      : searchParams.get('next') ?? '/'
+
   const redirectTo = request.nextUrl.clone()
   redirectTo.pathname = next
+  redirectTo.search = '' // não vaza token_hash/type para a URL de destino
 
   if (token_hash && type) {
     const supabase = await createClient()

@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
   revalidateTag(`${business_id}-dashboard`, {})
   revalidateTag(`${business_id}-ranking`, {})
   revalidateTag(`${business_id}-influencers`, {})
+  revalidateTag(`${business_id}-instagram`, {})
 
   return NextResponse.json({ revalidated: true, business_id })
 }

@@ -1,7 +1,10 @@
-import { getBusinessStores } from "./actions"
+import { getBusinessStores, getInstagramConnection } from "./actions"
 import ClientPage from "./integrations"
 
 export default async function IntegracoesPage() {
-  const stores = await getBusinessStores()
-  return <ClientPage stores={stores} />
+  const [stores, instagram] = await Promise.all([
+    getBusinessStores(),
+    getInstagramConnection(),
+  ])
+  return <ClientPage stores={stores} instagram={instagram} />
 }

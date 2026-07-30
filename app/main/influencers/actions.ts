@@ -114,17 +114,34 @@ export default async function getInfluencersData(
       const [
         { data, error },
         { data: topInfluencers },
+        { data: ig },
       ] = await Promise.all([
         client.rpc("get_business_influencers", rpcParams),
         client.rpc("get_business_top_influencers_v_r1_0_1", { p_limit: 5 }),
+        client.rpc("get_business_influencers_ig"),
       ])
 
       if (error) console.error(error)
-      return { influencers: data ?? [], topInfluencers: topInfluencers ?? [] }
+
+      const igMap = new Map<string, { followers_count: number | null; posts_count: number | null }>()
+      for (const r of ig ?? []) {
+        igMap.set(r.influencer_id, {
+          followers_count: r.followers_count ?? null,
+          posts_count:     r.posts_count ?? null,
+        })
+      }
+
+      const influencers = (data ?? []).map((row: any) => ({
+        ...row,
+        followers_count: igMap.get(row.influencer_id)?.followers_count ?? null,
+        posts_count:     igMap.get(row.influencer_id)?.posts_count ?? null,
+      }))
+
+      return { influencers, topInfluencers: topInfluencers ?? [] }
     },
     [cacheKey],
     {
-      tags: [`${uid}-orders`, `${uid}-influencers`],
+      tags: [`${uid}-orders`, `${uid}-influencers`, `${uid}-instagram`],
       revalidate: 300,
     }
   )()

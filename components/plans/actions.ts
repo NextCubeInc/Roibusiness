@@ -74,7 +74,7 @@ export async function CreateLink(plan: keyof typeof PLANS) {
       },
       is_building: false,
       layout_settings: {
-        image_url: "https://kfkiskakbhnbwabhaghv.supabase.co/storage/v1/object/public/avatars/UsRoi/splash-icon.png",
+        image_url: "https://damubikhrskzrxcgxcoc.supabase.co/storage/v1/object/public/avatars/UsRoi/splash-icon.png",
         primary_color: "#8a0193",
         secondary_color: "#212124"
       },
