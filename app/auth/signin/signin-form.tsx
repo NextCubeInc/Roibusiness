@@ -29,6 +29,7 @@ type SignInFormProps = React.ComponentProps<"div"> & {
   error?: string
   message?: string
 }
+const phone = "554738424884"
 
 export function SignInForm({ className, error, message, ...props }: SignInFormProps) {
   return (
@@ -44,7 +45,7 @@ export function SignInForm({ className, error, message, ...props }: SignInFormPr
             </a>
             <h1 className="text-xl font-bold">Bem Vindo Ao Roibusiness</h1>
             <FieldDescription>
-              Nao tem conta? <Link href="https://wa.me/5511994379510">Fale com Vendedores</Link>
+              Nao tem conta? <Link href={`https://wa.me/${phone}`}>Fale com Vendedores</Link>
             </FieldDescription>
           </div>
 
