@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROInfluencer — Reunião com Decisores</title>
+<link rel="icon" href="assets/img/logo.png">
+<link rel="stylesheet" href="assets/css/deck.css">
+<link rel="stylesheet" href="assets/css/biz.css">
+<link rel="stylesheet" href="assets/css/inf.css">
+</head>
+<body>
+<div class="deck-progress"></div>
+<div class="viewport">
+<div class="stage">
+
+  <!-- 1 · capa -->
+  <section class="slide s-cover" data-title="Quanto da sua verba de influência volta em vendas?">
+    <div class="left"></div>
+    <div class="phone" role="img" aria-label="Notificação do app ROInfluencer no celular"></div>
+    <div class="brand"><img src="assets/img/logo.png" alt=""><span><b>ROI</b>nfluencer<small>™</small></span></div>
+    <div class="copy">
+      <h1 class="h1" data-anim>Quanto da sua verba de influência volta em vendas?</h1>
+      <div class="lead" data-anim data-delay="250">A ROI mostra. Por influenciador.</div>
+    </div>
+    <div class="copyright">© 2026 ROInfluencer · roinfluencer.com</div>
+  </section>
+
+  <!-- 2 · seus números -->
+  <section class="slide s-questions" data-title="Primeiro, os seus números">
+    <div class="brand"><img src="assets/img/logo.png" alt=""><span><b>ROI</b>nfluencer<small>™</small></span></div>
+    <div class="network"><canvas></canvas></div>
+    <div class="wrap">
+      <div class="d-eyebrow" data-anim>Primeiro, os seus números</div>
+      <div class="qlist">
+        <div class="qrow" data-key="invest" data-anim>
+          <button aria-expanded="false"><span class="num">1</span><span class="q">Quanto vocês investem?</span><span class="ans"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="field"><div><div class="inner">Por mês, em influência (cachê, produto, comissão):
+            <label class="money-input">R$ <input inputmode="numeric" placeholder="0" aria-label="Investimento mensal em influência"></label></div></div></div>
+        </div>
+        <div class="qrow" data-key="revenue" data-anim>
+          <button aria-expanded="false"><span class="num">2</span><span class="q">Quanto volta em vendas?</span><span class="ans"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="field"><div><div class="inner">Vendas por mês atribuídas aos influenciadores:
+            <label class="money-input">R$ <input inputmode="numeric" placeholder="0" aria-label="Vendas mensais via influenciadores"></label></div></div></div>
+        </div>
+        <div class="qrow" data-key="influencers" data-anim>
+          <button aria-expanded="false"><span class="num">3</span><span class="q">Quem fica e quem sai?</span><span class="ans"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="field"><div><div class="inner">Quantos influenciadores ativos vocês têm hoje?
+            <label class="money-input"><input inputmode="numeric" placeholder="0" aria-label="Número de influenciadores ativos" style="width:140px"></label></div></div></div>
+        </div>
+      </div>
+      <div class="roi-now" aria-live="polite"></div>
+    </div>
+    <div class="pageno">2</div>
+  </section>
+
+  <!-- 3 · aposta ou canal -->
+  <section class="slide s-bars" data-title="Influência: aposta ou canal de vendas?">
+    <div class="brand"><img src="assets/img/logo.png" alt=""><span><b>ROI</b>nfluencer<small>™</small></span></div>
+    <h2 class="h2 slide-title" data-anim>Influência: aposta ou <span class="hl">canal de vendas</span>?</h2>
+    <div class="bars a" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="bars b" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i class="peak"></i></div>
+    <div class="bars-label a" data-anim data-delay="500">Sem dados: picos e quedas</div>
+    <div class="bars-label b" data-anim data-delay="1500">Com dados: cresce todo mês</div>
+    <div class="pageno">3</div>
+  </section>
+
+  <!-- 4 · custo -->
+  <section class="slide s-cost" data-title="Quanto custa não saber quem vende?">
+    <div class="brand"><img src="assets/img/logo.png" alt=""><span><b>ROI</b>nfluencer<small>™</small></span></div>
+    <h2 class="h2 slide-title" data-anim>Quanto custa não saber quem vende?</h2>
+    <div class="d-eyebrow" data-anim>Exemplo: 1 analista de marketing</div>
+    <div class="calc">
+      <div class="card c1" data-anim>
+        <div class="big"><span data-v="hours">6 h</span>
+          <span class="calc-stepper"><button data-step="hours:1" aria-label="Mais horas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button><button data-step="hours:-1" aria-label="Menos horas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg></button></span></div>
+        <div class="sub">por semana em<br>controle manual</div>
+      </div>
+      <div class="op" data-anim>×</div>
+      <div class="card c2" data-anim>
+        <div class="big"><span data-v="rate">R$ 33</span>
+          <span class="calc-stepper"><button data-step="rate:5" aria-label="Aumentar custo da hora"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m18 15-6-6-6 6"/></svg></button><button data-step="rate:-5" aria-label="Diminuir custo da hora"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg></button></span></div>
+        <div class="sub">custo da hora, com encargos</div>
+      </div>
+      <div class="op" data-anim>× 4 =</div>
+      <div class="card c3" data-anim>
+        <div class="big"><span data-v="month">R$ 792</span></div>
+        <div class="sub" data-v="year">por mês · R$ 9,5 mil por ano</div>
+      </div>
+    </div>
+    <div class="pillars">
+      <div class="quote-bar" data-anim data-delay="700">Corte quem não vende</div>
+      <div class="quote-bar" data-anim data-delay="850">Invista em quem vende</div>
+    </div>
+    <div class="footnote">Base: salário mediano de analista de marketing R$ 4.000 (Novo CAGED, out/2026) × 1,55 de encargos CLT (Lucro Presumido/Real) ÷ 186 h/mês. Horas: 15% a 18% da rotina de influência vai para acompanhamento e relatório (Superfiliate). Valores estimados.</div>
+    <div class="pageno">4</div>
+  </section>
+
+  <!-- 5 · demo empresa -->
+  <section class="slide s-demo s-biz" data-title="O retorno de cada influenciador. Na hora." data-demo="business">
+    <div class="brand"><img src="assets/img/logo.png" alt=""><span><b>ROI</b>nfluencer<small>™</small></span></div>
+    <h2 class="h2 slide-title" data-anim>O retorno de cada influenciador. <span class="hl">Na hora.</span></h2>
+    <div class="demo-tools">
+      <button class="tool-btn primary" data-act="sale"><span data-ic="zap"></span>Simular venda</button>
+      <button class="tool-btn" data-act="auto"><span class="dot"></span>Ao vivo</button>
+      <button class="tool-btn" data-act="focus" aria-label="Expandir demo"><span data-ic="maximize-2"></span></button>
+    </div>
+    <div class="demo-frame" data-anim="zoom">
+      <div class="device-laptop"><div class="app-viewport"><div class="app-scaler" data-app="biz" data-start="dashboard"></div></div></div>
+    </div>
+    <div class="pageno">5</div>
+  </section>
+
+  <!-- 6 · demo influenciador -->
+  <section class="slide s-demo s-inf" data-title="Quem vê a própria venda, vende mais." data-demo="influencer">
+    <div class="brand"><img src="assets/img/logo.png" alt=""><span><b>ROI</b>nfluencer<small>™</small></span></div>
+    <div class="phone-glow"></div>
+    <div class="copy">
+      <h1 class="h1" data-anim>Quem vê a própria venda, <span class="hl">vende mais.</span></h1>
+      <ul>
+        <li data-anim data-delay="300"><span data-ic="bell-ring"></span>Notificação a cada venda com o cupom</li>
+        <li data-anim data-delay="400"><span data-ic="trophy"></span>Níveis e campanhas que puxam meta</li>
+        <li data-anim data-delay="500"><span data-ic="wallet"></span>Comissão do mês, na palma da mão</li>
+      </ul>
+      <div style="margin-top:56px; display:flex; gap:14px" data-anim data-delay="600">
+        <button class="tool-btn primary" data-act="sale"><span data-ic="zap"></span>Simular venda</button>
+      </div>
+    </div>
+    <div class="phones">
+      <div class="phone back" data-anim="right" data-delay="150"><div class="island"></div><div class="screen" data-app="inf" data-start="vendas" data-banner="0"></div></div>
+      <div class="phone" data-anim="right" data-delay="300"><div class="island"></div><div class="screen" data-app="inf" data-start="dashboard"></div></div>
+    </div>
+    <div class="pageno" style="left:128px; right:auto">6</div>
+  </section>
+
+  <!-- 7 · uma venda, dois apps -->
+  <section class="slide s-demo s-live" data-title="Uma venda. Dois apps. Na hora." data-demo="ambos">
+    <div class="brand"><img src="assets/img/logo.png" alt=""><span><b>ROI</b>nfluencer<small>™</small></span></div>
+    <h2 class="h2 slide-title" data-anim>Uma venda. Dois apps. <span class="hl">Na hora.</span></h2>
+    <div class="demo-tools">
+      <button class="tool-btn primary" data-act="sale"><span data-ic="zap"></span>Simular venda</button>
+      <button class="tool-btn" data-act="auto"><span class="dot"></span>Ao vivo</button>
+    </div>
+    <div class="live-wrap">
+      <div class="laptop-col" data-anim="left">
+        <div class="col-label"><span data-ic="building-2"></span>Empresa · painel</div>
+        <div class="device-laptop"><div class="app-viewport"><div class="app-scaler" data-app="biz" data-start="vendas"></div></div></div>
+      </div>
+      <div class="phone-col" data-anim="right">
+        <div class="col-label"><span data-ic="smartphone"></span>Influenciador · app</div>
+        <div class="phone"><div class="island"></div><div class="screen" data-app="inf" data-start="dashboard"></div></div>
+      </div>
+    </div>
+    <div class="pageno">7</div>
+  </section>
+
+  <!-- 8 · case Olway -->
+  <section class="slide s-case" data-title="Case Olway">
+    <div class="brand"><img src="assets/img/logo.png" alt=""><span><b>ROI</b>nfluencer<small>™</small></span></div>
+    <div class="network"><canvas></canvas></div>
+    <div class="case-phone" data-anim="right" role="img" aria-label="Perfil da Olway no Instagram"></div>
+    <div class="copy">
+      <div class="case-tag" data-anim><img src="assets/img/case-olway-logo.png" alt="Olway"><span>CASE OLWAY</span></div>
+      <div style="margin-top:70px" data-anim><div class="case-stat" data-count="272" data-prefix="+" data-suffix="%">+272%</div><div class="case-stat-sub">vendas via influenciadores</div></div>
+      <div style="margin-top:56px" data-anim data-delay="300"><div class="case-stat" style="font-size:118px">R$ 2,7 mil → 25 mil</div><div class="case-stat-sub">por parceiro, por mês</div></div>
+    </div>
+    <div class="footnote">Fonte: case Olway &amp; ROInfluencer · +200 influenciadores ativos</div>
+    <div class="pageno">8</div>
+  </section>
+
+  <!-- 9 · case Team Ícaro -->
+  <section class="slide s-case" data-title="Case Team Ícaro">
+    <div class="brand"><img src="assets/img/logo.png" alt=""><span><b>ROI</b>nfluencer<small>™</small></span></div>
+    <div class="network"><canvas></canvas></div>
+    <div class="case-phone icaro" data-anim="right" role="img" aria-label="Perfil de Ícaro Lermen no Instagram"></div>
+    <div class="copy">
+      <div class="case-tag" data-anim><img src="assets/img/case-icaro-logo.png" alt="Ícaro Consultoria"><span>CASE TEAM ÍCARO</span></div>
+      <div style="margin-top:60px; display:flex; gap:110px" data-anim>
+        <div><div class="case-stat" data-count="160" data-prefix="+" data-suffix="%">+160%</div><div class="case-stat-sub">nas vendas via<br>influenciadores</div></div>
+        <div><div class="case-stat" data-count="200" data-prefix="+">+200</div><div class="case-stat-sub">influenciadores na ROI</div></div>
+      </div>
+      <div class="quote-bar" style="margin-top:60px; font-size:42px; font-weight:500" data-anim data-delay="400">“Transparência, velocidade e resultado.”</div>
+    </div>
+    <div class="footnote">Fonte: Team Ícaro · usa a ROI desde o MVP (abr/mai 2026) · antes, controle em planilha</div>
+    <div class="pageno">9</div>
+  </section>
+
+  <!-- 10 · escala -->
+  <section class="slide s-scale" data-title="+10.000 influenciadores geridos por um gestor">
+    <div class="brand"><img src="assets/img/logo.png" alt=""><span><b>ROI</b>nfluencer<small>™</small></span></div>
+    <svg class="orbits" viewBox="0 0 1100 1100" aria-hidden="true"></svg>
+    <div class="wrap">
+      <div class="mega" data-count="10000" data-prefix="+" data-dur="1800">+10.000</div>
+      <div class="l1" data-anim>influenciadores geridos por um gestor.</div>
+      <div class="l2" data-anim data-delay="250">Menos equipe. Mais controle.</div>
+    </div>
+    <div class="pageno">10</div>
+  </section>
+
+  <!-- 11 · investimento -->
+  <section class="slide s-price" data-title="Investimento">
+    <div class="brand"><img src="assets/img/logo.png" alt=""><span><b>ROI</b>nfluencer<small>™</small></span></div>
+    <h2 class="h2 slide-title" data-anim>Investimento</h2>
+    <div class="plans">
+      <div class="plan basic" data-anim><span class="reco">Indicado para vocês</span>
+        <div class="name">BASIC</div><div class="price">R$ 497</div><div class="per">por mês</div>
+        <div class="feat">Até 50 influenciadores<br>300 vendas por mês</div></div>
+      <div class="plan pro" data-anim><span class="reco">Indicado para vocês</span>
+        <div class="name">ROI PRO</div><div class="price">R$ 1.870</div><div class="per">por mês</div>
+        <div class="feat">Até 150 influenciadores<br>2.000 vendas por mês</div></div>
+      <div class="plan elite" data-anim><span class="reco">Indicado para vocês</span>
+        <div class="name">ROI ELITE</div><div class="price">Sob medida</div><div class="per">conforme a operação</div>
+        <div class="feat">Influenciadores e vendas<br>sob medida</div></div>
+    </div>
+    <div class="closing quote-bar" data-anim data-delay="400">O Basic custa menos que o tempo de 1 analista em planilha: <span class="hl">R$ 792/mês</span>.</div>
+    <div class="pageno">11</div>
+  </section>
+
+  <!-- 12 · encerramento -->
+  <section class="slide s-end" data-title="Vamos colocar isso para rodar?">
+    <div class="brand"><img src="assets/img/logo.png" alt=""><span><b>ROI</b>nfluencer<small>™</small></span></div>
+    <div class="network"><canvas></canvas></div>
+    <h2 class="h2 slide-title" data-anim style="font-size:96px">Vamos colocar isso <span class="hl">para rodar?</span></h2>
+    <div class="steps">
+      <div class="step" data-anim><div class="n">01</div><div class="t">Plano</div></div>
+      <div class="step" data-anim><div class="n">02</div><div class="t">Implantação</div></div>
+      <div class="step last" data-anim><div class="n">03</div><div class="t">Primeiras vendas</div></div>
+    </div>
+    <div class="contacts" data-anim data-delay="400">
+      <div><b>WhatsApp</b> (47) 3842-4884</div>
+      <div><b>Instagram</b> @roinfluencer_</div>
+      <div><b>Site</b> roinfluencer.com</div>
+    </div>
+    <div class="copyright">© 2026 ROInfluencer. Todos os direitos reservados</div>
+  </section>
+
+  <div class="stage-toast" role="status"></div>
+</div>
+</div>
+
+<nav class="deck-nav" aria-label="Navegação dos slides">
+  <button data-act="prev" aria-label="Slide anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
+  <span class="count">1 / 12</span>
+  <button data-act="next" aria-label="Próximo slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
+  <span class="sep"></span>
+  <button data-act="overview" aria-label="Visão geral (O)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+  <button data-act="full" aria-label="Tela cheia (F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+</nav>
+<div class="hint"><kbd>←</kbd> <kbd>→</kbd> navegar · <kbd>O</kbd> visão geral · <kbd>F</kbd> tela cheia</div>
+<div class="overview" role="dialog" aria-label="Visão geral dos slides"><h3>Slides</h3><div class="overview-grid"></div></div>
+
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/data.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/biz.js"></script>
+<script src="assets/js/inf.js"></script>
+<script src="assets/js/demos.js"></script>
+<script src="assets/js/deck.js"></script>
+</body>
+</html>
