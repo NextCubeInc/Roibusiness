@@ -117,10 +117,10 @@ kbd { font-family: inherit; border: 1px solid #2a363c; border-bottom-width: 2px;
 /* ---------- slide 1: capa ---------- */
 .s-cover { padding: 0; background: var(--bg); }
 .s-cover .left {
-  position: absolute; inset: 0 auto 0 0; width: 760px; background: linear-gradient(180deg, #171020 0%, #23122b 45%, #380d42 100%);
+  position: absolute; inset: 0 auto 0 0; width: 960px; background: linear-gradient(180deg, #171020 0%, #23122b 45%, #380d42 100%);
 }
 .s-cover .phone {
-  position: absolute; right: 0; top: 160px; width: 1056px; height: 864px; overflow: hidden;
+  position: absolute; right: 0; top: 160px; width: 960px; height: 864px; overflow: hidden;
   background: url("../img/hero-phone.jpg") right top / cover no-repeat;
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 160px), linear-gradient(180deg, transparent 0, #000 60px, #000 calc(100% - 120px), transparent);
   -webkit-mask-composite: source-in;
