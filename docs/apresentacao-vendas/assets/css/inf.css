@@ -116,9 +116,9 @@
 
 /* banner de push */
 .inf .push {
-  position: absolute; left: 8px; right: 8px; top: 10px; z-index: 60; border-radius: 24px; padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start;
+  position: absolute; left: 8px; right: 8px; top: 50px; z-index: 60; border-radius: 24px; padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start;
   background: rgba(40, 38, 46, .78); backdrop-filter: blur(24px) saturate(1.6); box-shadow: 0 10px 40px rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.08);
-  transform: translateY(-140%); transition: transform .5s cubic-bezier(.2,.9,.25,1.1); cursor: pointer;
+  transform: translateY(-180%); transition: transform .5s cubic-bezier(.2,.9,.25,1.1); cursor: pointer;
 }
 .inf .push.show { transform: none; }
 .inf .push img { width: 38px; height: 38px; border-radius: 9px; flex: none; }
