@@ -101,7 +101,7 @@
   const grid = overview.querySelector(".overview-grid");
   slides.forEach((s, i) => {
     const b = document.createElement("button");
-    b.innerHTML = `<span class="n">${String(i + 1).padStart(2, "0")}</span><span class="t">${s.dataset.title || ""}</span>${s.dataset.demo ? `<span class="tag">demo interativa</span>` : ""}`;
+    b.innerHTML = `<span class="n">${s.dataset.extra != null ? "EXTRA" : String(i + 1).padStart(2, "0")}</span><span class="t">${s.dataset.title || ""}</span>${s.dataset.demo ? `<span class="tag">demo interativa</span>` : ""}`;
     b.addEventListener("click", () => { toggleOverview(); go(i); });
     grid.appendChild(b);
   });
@@ -195,7 +195,7 @@
   }
 
   /* ---------- estado compartilhado do roteiro ---------- */
-  const deal = { invest: 0, revenue: 0, influencers: 0, monthlyCost: 792 };
+  const deal = { invest: 0, revenue: 0, influencers: 0, monthlyCost: 3168 };
 
   /* ---------- slide 2: perguntas de diagnóstico ---------- */
   const qs = document.querySelector(".s-questions");
@@ -259,12 +259,16 @@
   /* ---------- slide 4: calculadora de custo ---------- */
   const cost = document.querySelector(".s-cost");
   if (cost) {
-    const st = { hours: 6, rate: 33 };
+    const st = { people: 3, hours: 8, rate: 33 };
+    const pEl = cost.querySelector("[data-v=people]"), tEl = cost.querySelector("[data-v=team]");
     const hEl = cost.querySelector("[data-v=hours]"), rEl = cost.querySelector("[data-v=rate]");
     const mEl = cost.querySelector("[data-v=month]"), yEl = cost.querySelector("[data-v=year]");
+    const monthly = () => st.people * st.hours * st.rate * 4;
     function render(bump) {
-      const month = st.hours * st.rate * 4;
+      const month = monthly();
       deal.monthlyCost = month;
+      pEl.textContent = st.people;
+      tEl.textContent = st.people === 1 ? "1 pessoa" : `equipe de ${st.people} pessoas`;
       hEl.textContent = `${st.hours} h`;
       rEl.textContent = brl(st.rate);
       mEl.textContent = brl(month);
@@ -282,8 +286,7 @@
       });
     });
     cost.addEventListener("slide:enter", () => {
-      const month = st.hours * st.rate * 4;
-      countUp(mEl, month, { dur: 1300, fmt: (v) => brl(Math.round(v)) });
+      countUp(mEl, monthly(), { dur: 1300, fmt: (v) => brl(Math.round(v)) });
     });
     render(false);
   }
@@ -294,9 +297,11 @@
     if (!price) return;
     const closing = price.querySelector(".closing");
     const m = deal.monthlyCost;
-    closing.innerHTML = m > 497
-      ? `O Basic custa menos que o tempo de 1 analista em planilha: <span class="hl">${brl(m)}/mês</span>.`
-      : `O tempo de 1 analista em planilha: <span class="hl">${brl(m)}/mês</span>. Sem ver quem vende.`;
+    const times = Math.floor(m / 497);
+    const costHtml = `<span class="hl">${brl(m)}/mês</span>`;
+    if (times >= 2) closing.innerHTML = `O Basic custa ${times} vezes menos que o controle manual da equipe: ${costHtml}.`;
+    else if (m > 497) closing.innerHTML = `O Basic custa menos que o controle manual da equipe: ${costHtml}.`;
+    else closing.innerHTML = `O controle manual da equipe: ${costHtml}. Sem ver quem vende.`;
     const n = deal.influencers;
     price.querySelectorAll(".plan").forEach((p) => p.classList.remove("recommended"));
     if (n) {
@@ -306,7 +311,7 @@
   }
   updatePlans();
 
-  /* ---------- slide 10: órbitas de influenciadores ---------- */
+  /* ---------- slide 9: órbitas de influenciadores ---------- */
   const orb = document.querySelector(".orbits");
   if (orb) {
     let h = "";

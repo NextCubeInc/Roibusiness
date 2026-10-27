@@ -7,7 +7,7 @@
   /* painel da empresa: largura lógica de 1280px, escalada para caber no notebook */
   document.querySelectorAll('[data-app="biz"]').forEach((el) => {
     const vp = el.parentElement;
-    window.BizApp(el, { start: el.dataset.start });
+    el.bizApp = window.BizApp(el, { start: el.dataset.start });
     const fit = () => {
       const w = vp.clientWidth, h = vp.clientHeight;
       if (!w) return;
@@ -34,6 +34,45 @@
     fit();
   });
 
+  /* chips: acendem por um instante ao clicar */
+  function flashChip(chip) {
+    chip.parentElement.querySelectorAll(".d-chip").forEach((c) => c.classList.toggle("on", c === chip));
+    clearTimeout(chip.flashT);
+    chip.flashT = setTimeout(() => chip.classList.remove("on"), 1500);
+  }
+
+  /* slide 5: cada chip leva o painel à tela que mostra aquele número */
+  document.querySelectorAll("[data-go]").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const app = chip.closest(".slide").querySelector('[data-app="biz"]').bizApp;
+      app.go(chip.dataset.go, chip.dataset.tab ? { rankTab: chip.dataset.tab } : {});
+      if (chip.dataset.spot) setTimeout(() => app.spot(chip.dataset.spot), 120);
+      flashChip(chip);
+    });
+  });
+
+  /* slide 6: a marca manda uma mensagem e ela chega no celular da influenciadora */
+  const MSGS = {
+    campanha: () => ({ title: "Nova campanha no ar 🏆", body: "Quem mais vender até o fim do mês leva R$ 1.000. Seu cupom já está valendo." }),
+    briefing: () => ({ title: "Briefing do lançamento", body: "Mostre o produto em uso e fale do seu cupom nos primeiros 5 segundos do vídeo." }),
+    comissao: () => {
+      const c = M.influencers[0].coupons[0];
+      return { title: "Comissão em dobro no fim de semana", body: `De sexta a domingo, o cupom ${c.code} paga ${c.pct * 2}% em todas as vendas.` };
+    },
+    materiais: () => ({ title: "Materiais novos 📸", body: "Fotos, vídeos e roteiro da coleção nova já estão no drive da marca." }),
+  };
+  document.querySelectorAll("[data-msg]").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const me = M.influencers[0];
+      const rec = { id: "n" + Date.now(), at: new Date(), ...MSGS[chip.dataset.msg](), audience: me.name, recipients: 1, delivered: 1, failed: 0, status: "sent" };
+      M.notifHistory.unshift(rec);
+      M.emit("push", { ...rec, ids: [me.id], business: M.business.name });
+      const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      window.Deck.toast(`${window.icon("send")}<span>${esc(M.business.name)} → <b>${me.name}</b>: ${rec.title}</span>`);
+      flashChip(chip);
+    });
+  });
+
   /* controles do apresentador */
   document.querySelectorAll(".s-demo").forEach((slide) => {
     const onlyMe = slide.dataset.demo === "influencer";
@@ -42,7 +81,10 @@
       const inf = M.byId(o.infId);
       window.Deck.toast(`${window.icon("zap")}<span>Nova venda: <b>${inf.name}</b> · cupom ${o.coupon} · ${M.fmt.brl(o.total)}</span>`);
     };
-    slide.querySelectorAll('[data-act="sale"]').forEach((b) => b.addEventListener("click", fire));
+    slide.querySelectorAll('[data-act="sale"]').forEach((b) => b.addEventListener("click", () => {
+      fire();
+      if (b.classList.contains("d-chip")) flashChip(b);
+    }));
 
     const autoBtn = slide.querySelector('[data-act="auto"]');
     let timer = null;

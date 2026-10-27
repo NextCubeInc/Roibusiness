@@ -71,6 +71,8 @@
 .biz .kpi .s { font-size: 11px; color: var(--muted-fg); }
 .biz .kpi.flash::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(225,42,251,.18), transparent); animation: sweep .9s ease; }
 @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.biz .spot { animation: spot 2.2s ease; }
+@keyframes spot { 0%, 65% { box-shadow: 0 0 0 2px #e12afb, 0 0 28px rgba(225,42,251,.35); } 100% { box-shadow: 0 0 0 2px transparent; } }
 
 .biz .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 10px; border-radius: 6px;

@@ -665,6 +665,16 @@
 
     root.dataset.uid = Math.random().toString(36).slice(2, 7);
     render();
-    return { go(r) { st.route = r; render(); }, render: () => render(true), get route() { return st.route; } };
+    return {
+      go(r, patch) { closeLayer(); dropdown.classList.remove("open"); Object.assign(st, patch); st.route = r; render(); },
+      /* destaca um bloco da tela atual (usado pelos chips do slide) */
+      spot(sel) {
+        main.querySelectorAll(sel).forEach((el) => {
+          const box = el.closest(".kpi, .card") || el;
+          box.classList.remove("spot"); void box.offsetWidth; box.classList.add("spot");
+        });
+      },
+      render: () => render(true), get route() { return st.route; },
+    };
   };
 })();
