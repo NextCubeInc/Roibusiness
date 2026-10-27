@@ -26,7 +26,7 @@ python3 build-single.py
 
 Também dá para usar os botões da barra inferior ou passar o dedo (touch).
 
-## Roteiro (11 slides + 1 extra)
+## Roteiro (11 slides)
 
 Os slides 1 a 11 seguem a ordem e a numeração do PDF.
 
@@ -57,8 +57,6 @@ Os slides 1 a 11 seguem a ordem e a numeração do PDF.
 9. +10.000 influenciadores
 10. Investimento
 11. Próximos passos e contatos
-
-**Extra (slide 12, fora do PDF):** "Uma venda, dois apps" mostra o painel e o celular lado a lado, e a venda aparece nos dois ao mesmo tempo. Na visão geral (`O`), ele aparece como EXTRA. Também dá para chegar nele com `12` + `Enter`.
 
 **Dica:** uma notificação enviada em Notificações (slide 5) chega ao celular da influenciadora. Uma campanha criada em Ranking aparece na aba Campanhas do app.
 

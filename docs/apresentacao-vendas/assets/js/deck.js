@@ -101,7 +101,7 @@
   const grid = overview.querySelector(".overview-grid");
   slides.forEach((s, i) => {
     const b = document.createElement("button");
-    b.innerHTML = `<span class="n">${s.dataset.extra != null ? "EXTRA" : String(i + 1).padStart(2, "0")}</span><span class="t">${s.dataset.title || ""}</span>${s.dataset.demo ? `<span class="tag">demo interativa</span>` : ""}`;
+    b.innerHTML = `<span class="n">${String(i + 1).padStart(2, "0")}</span><span class="t">${s.dataset.title || ""}</span>${s.dataset.demo ? `<span class="tag">demo interativa</span>` : ""}`;
     b.addEventListener("click", () => { toggleOverview(); go(i); });
     grid.appendChild(b);
   });
