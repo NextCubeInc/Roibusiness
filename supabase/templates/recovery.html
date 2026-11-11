@@ -1,0 +1,20 @@
+{{/*
+  Template "Reset Password" do Supabase Auth (Dashboard → Authentication → Emails → Reset Password).
+  Assunto sugerido: Redefinir sua senha · Roinfluencer
+
+  Pedidos do APP (redirectTo começa com roinfluencer://) recebem o link da página ponte
+  /auth/app-link, que não gasta o token ao abrir (PC, prévia do WhatsApp, antivírus).
+  Pedidos da WEB (business / sellers) continuam com o link direto de sempre.
+*/}}
+{{ $app := false }}
+{{ if ge (len .RedirectTo) 15 }}{{ if eq (slice .RedirectTo 0 15) "roinfluencer://" }}{{ $app = true }}{{ end }}{{ end }}
+<h2>Redefinir senha</h2>
+<p>Recebemos um pedido para redefinir a senha da sua conta Roinfluencer.</p>
+{{ if $app }}
+<p>Abra este e-mail <strong>no celular em que você pediu a recuperação</strong> e toque no botão abaixo em até 5 minutos.</p>
+<p><a href="{{ .SiteURL }}/auth/app-link#u={{ .ConfirmationURL }}">Redefinir senha no app</a></p>
+<p>Se você abriu no computador, tudo bem: o link continua valendo. Encaminhe para o celular e abra por lá.</p>
+{{ else }}
+<p><a href="{{ .ConfirmationURL }}">Redefinir senha</a></p>
+{{ end }}
+<p>Se você não pediu, ignore este e-mail. Sua senha atual continua valendo.</p>
