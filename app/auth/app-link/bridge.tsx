@@ -3,6 +3,7 @@
 import { useLayoutEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 
 const STORAGE_KEY = "roi-app-link-target"
 const APP_SCHEME = "roinfluencer://"
@@ -54,7 +55,7 @@ function bridgeUrl(target: string) {
 export function AppLinkBridge() {
   const [state, setState] = useState<State>({ kind: "loading" })
   const [opened, setOpened] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [copy, setCopy] = useState<"idle" | "copied" | "failed">("idle")
 
   // useLayoutEffect: roda antes de qualquer useEffect (inclusive o do
   // <Analytics/> no layout), então o token sai da barra de endereço antes de
@@ -63,11 +64,11 @@ export function AppLinkBridge() {
     let target: string | null = null
     if (window.location.hash) {
       target = parseTarget(readHashTarget())
-      if (target) {
-        try {
-          sessionStorage.setItem(STORAGE_KEY, target)
-        } catch {}
-      }
+      try {
+        // Link inválido também apaga o anterior: recarregar não ressuscita um token velho.
+        if (target) sessionStorage.setItem(STORAGE_KEY, target)
+        else sessionStorage.removeItem(STORAGE_KEY)
+      } catch {}
       window.history.replaceState(null, "", window.location.pathname)
     } else {
       // Recarregou a página depois de limpar o fragmento.
@@ -82,9 +83,10 @@ export function AppLinkBridge() {
   async function copyLink(target: string) {
     try {
       await navigator.clipboard.writeText(bridgeUrl(target))
-      setCopied(true)
+      setCopy("copied")
     } catch {
-      setCopied(false)
+      // Navegador bloqueou a área de transferência: mostra o link para copiar à mão.
+      setCopy("failed")
     }
   }
 
@@ -113,8 +115,19 @@ export function AppLinkBridge() {
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
           <Button className="w-full" onClick={() => copyLink(state.target)}>
-            {copied ? "Link copiado" : "Copiar link"}
+            {copy === "copied" ? "Link copiado" : "Copiar link"}
           </Button>
+          {copy === "failed" && (
+            <div className="flex w-full flex-col gap-1">
+              <p className="text-xs text-muted-foreground">Não foi possível copiar automaticamente. Copie o link abaixo:</p>
+              <Input
+                readOnly
+                aria-label="Link para abrir no celular"
+                value={bridgeUrl(state.target)}
+                onFocus={(e) => e.currentTarget.select()}
+              />
+            </div>
+          )}
         </CardFooter>
       </Shell>
     )

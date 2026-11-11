@@ -3,7 +3,7 @@ import { Geist, Geist_Mono, Roboto_Slab, Roboto, IBM_Plex_Sans } from "next/font
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils";
-import { Analytics } from "@vercel/analytics/next"
+import { VercelAnalytics } from "@/components/vercel-analytics"
 
 const robotoHeading = Roboto({subsets:['latin'],variable:'--font-heading'});
 
@@ -31,7 +31,7 @@ export default function RootLayout({
         <meta name="google" content="notranslate" />
       </head>
       <body>
-        <Analytics/>
+        <VercelAnalytics/>
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
